@@ -427,7 +427,7 @@ func footer(w io.Writer, p paint, res *model.Result, opts Options) {
 	if opts.Promo && res.Counts.Total > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, indent+p.dim("Want this watched continuously across the whole estate?"))
-		fmt.Fprintln(w, indent+p.dim("https://secorvia.com - free tier, no card. Set FRONTDOOR_NO_PROMO=1 to hide this."))
+		fmt.Fprintln(w, indent+p.dim("https://www.secorvia.com - free tier, no card. Set FRONTDOOR_NO_PROMO=1 to hide this."))
 	}
 	fmt.Fprintln(w)
 }

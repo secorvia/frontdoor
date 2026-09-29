@@ -161,6 +161,26 @@ func ScopeFor(s string) model.Scope {
 //	repo:ORG/REPO:pull_request
 //	repo:ORG/REPO:job_workflow_ref:ORG/REPO/.github/workflows/x.yml@refs/heads/main
 //	repo:ORG/*                      org-wide
+//
+// Repositories created after 15 July 2026 use an immutable form that appends a
+// numeric id to the owner and the repository, separated by "@":
+//
+//	repo:octo-org@123456/octo-repo@456789:ref:refs/heads/main
+//
+// "@" cannot appear in a GitHub owner or repository name, so splitting on it is
+// unambiguous. The ids are kept in OrgID and ProjectID rather than discarded:
+// the display wants the plain name, and any fix we emit has to carry the ids
+// back or it will not match the token.
+// splitImmutableName separates "octo-repo@456789" into the name and the id.
+// A name with no "@" is the legacy form and yields an empty id.
+func splitImmutableName(s string) (name, id string) {
+	n, i, found := strings.Cut(s, "@")
+	if !found {
+		return s, ""
+	}
+	return n, i
+}
+
 func parseGitHubSub(sub string, p *model.ExternalParty) {
 	rest, ok := strings.CutPrefix(sub, "repo:")
 	if !ok {
@@ -177,9 +197,10 @@ func parseGitHubSub(sub string, p *model.ExternalParty) {
 		name, ctx = n, c
 	}
 	if org, repo, found := strings.Cut(name, "/"); found {
-		p.Org, p.Project = org, repo
+		p.Org, p.OrgID = splitImmutableName(org)
+		p.Project, p.ProjectID = splitImmutableName(repo)
 	} else {
-		p.Org = name
+		p.Org, p.OrgID = splitImmutableName(name)
 	}
 
 	switch {

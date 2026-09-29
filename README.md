@@ -18,7 +18,7 @@
   <a href="#what-it-finds">Rules</a> ·
   <a href="#how-this-compares">Compared to other tools</a> ·
   <a href="#safety">Safety</a> ·
-  <a href="https://secorvia.com/docs/frontdoor/">Docs</a>
+  <a href="https://www.secorvia.com/docs/frontdoor/">Docs</a>
 </p>
 
 ---
@@ -72,7 +72,7 @@ $ frontdoor scan
                        }
                      }
 
-           Docs      https://secorvia.com/docs/frontdoor/FD001
+           Docs      https://www.secorvia.com/docs/frontdoor/FD001
 
   2 external identities can enter your clouds. 1 accepts ANY GitHub repository.
   One of them crosses AWS into GCP and reaches BigQuery datasets.
@@ -235,6 +235,7 @@ does not ask.
 | **SAML providers** | entityID and validity. The metadata document is never stored |
 | **Every IAM role trust policy** | parsed into structured doors, one per external principal |
 | **Subject claims** | GitHub Actions, GitLab CI, CircleCI, Terraform Cloud, Vercel, Buildkite, Bitbucket Pipelines, Google (AWS↔GCP federation) |
+| **GitHub immutable subjects** | `repo:org@123456/repo@456789:...`, the format repositories created after 15 July 2026 use. Read so the report shows plain names, with the numeric ids carried back into every suggested fix, because a condition written without them stops matching |
 | **Cross-account trusts** | account id, `sts:ExternalId` presence, known-vendor labelling |
 | **What each door grants** | attached + inline policies flattened, privilege-escalation actions flagged with a reason |
 | **Organization layout** | so a sibling account is not reported as a stranger |
@@ -755,15 +756,15 @@ false positives come from.
 Every rule has a page explaining the risk, what an attacker actually does with
 it, and how to fix it:
 
-**[secorvia.com/docs/frontdoor](https://secorvia.com/docs/frontdoor/)**
+**[secorvia.com/docs/frontdoor](https://www.secorvia.com/docs/frontdoor/)**
 
 | | | |
 |---|---|---|
-| [FD001](https://secorvia.com/docs/frontdoor/FD001) Unpinned subject | [FD002](https://secorvia.com/docs/frontdoor/FD002) Missing audience | [FD003](https://secorvia.com/docs/frontdoor/FD003) Open door to escalation |
-| [FD005](https://secorvia.com/docs/frontdoor/FD005) Wrong-issuer condition | [FD010](https://secorvia.com/docs/frontdoor/FD010) Org-wide subject | [FD011](https://secorvia.com/docs/frontdoor/FD011) Any branch or tag |
-| [FD012](https://secorvia.com/docs/frontdoor/FD012) `pull_request` accepted | [FD013](https://secorvia.com/docs/frontdoor/FD013) No `ExternalId` | [FD014](https://secorvia.com/docs/frontdoor/FD014) Unidentified account |
-| [FD015](https://secorvia.com/docs/frontdoor/FD015) Trust on a name | [FD020](https://secorvia.com/docs/frontdoor/FD020) Long-lived keys | [FD021](https://secorvia.com/docs/frontdoor/FD021) Unused provider |
-| [FD022](https://secorvia.com/docs/frontdoor/FD022) Stale thumbprint | [FD030](https://secorvia.com/docs/frontdoor/FD030) Impersonation chain | [FD031](https://secorvia.com/docs/frontdoor/FD031) Cross-cloud chain |
+| [FD001](https://www.secorvia.com/docs/frontdoor/FD001) Unpinned subject | [FD002](https://www.secorvia.com/docs/frontdoor/FD002) Missing audience | [FD003](https://www.secorvia.com/docs/frontdoor/FD003) Open door to escalation |
+| [FD005](https://www.secorvia.com/docs/frontdoor/FD005) Wrong-issuer condition | [FD010](https://www.secorvia.com/docs/frontdoor/FD010) Org-wide subject | [FD011](https://www.secorvia.com/docs/frontdoor/FD011) Any branch or tag |
+| [FD012](https://www.secorvia.com/docs/frontdoor/FD012) `pull_request` accepted | [FD013](https://www.secorvia.com/docs/frontdoor/FD013) No `ExternalId` | [FD014](https://www.secorvia.com/docs/frontdoor/FD014) Unidentified account |
+| [FD015](https://www.secorvia.com/docs/frontdoor/FD015) Trust on a name | [FD020](https://www.secorvia.com/docs/frontdoor/FD020) Long-lived keys | [FD021](https://www.secorvia.com/docs/frontdoor/FD021) Unused provider |
+| [FD022](https://www.secorvia.com/docs/frontdoor/FD022) Stale thumbprint | [FD030](https://www.secorvia.com/docs/frontdoor/FD030) Impersonation chain | [FD031](https://www.secorvia.com/docs/frontdoor/FD031) Cross-cloud chain |
 
 The same pages are in [`docs/rules/`](docs/rules/) in this repository, so they
 work offline and in air-gapped environments.
@@ -777,7 +778,7 @@ for a CLI and it is deliberately all it does.
 
 If you want the same analysis running continuously across every account, with
 history, drift alerts when a trust policy loosens, and one view across AWS, GCP
-and Azure, that is [**Secorvia**](https://secorvia.com), cloud security posture
+and Azure, that is [**Secorvia**](https://www.secorvia.com), cloud security posture
 management built by the same team. There is a free tier and it does not ask for
 a card.
 
@@ -794,5 +795,5 @@ Apache 2.0. See [LICENSE](LICENSE).
 Security issues: see [SECURITY.md](SECURITY.md). Contributions:
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Built by the team behind [Secorvia](https://secorvia.com), cloud security
+Built by the team behind [Secorvia](https://www.secorvia.com), cloud security
 posture management for AWS, GCP and Azure.

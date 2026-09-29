@@ -286,6 +286,63 @@ func TestFD010_OrgWide(t *testing.T) {
 	}
 }
 
+// A repository on GitHub's immutable subject format sends numeric ids with every
+// token. A suggested fix that drops them does not match, so following our own
+// advice would take the caller's pipeline down. That is worse than the finding.
+func TestFixReproducesImmutableSubjectFormat(t *testing.T) {
+	sub := "repo:octo-org@123456/octo-repo@456789:ref:refs/heads/main"
+
+	d := githubDoor()
+	// Pinned to the repository but not to a ref, so FD011 fires and its fix
+	// proposes the exact subject to use instead.
+	d.Conditions[1] = model.Condition{
+		Operator: "StringLike", Key: ghIssuer + ":sub",
+		Values: []string{"repo:octo-org@123456/octo-repo@456789:*"},
+	}
+	d.ExternalParties = []model.ExternalParty{{
+		Kind: model.PartyGitHub, Scope: model.ScopeProject,
+		Display: "github.com/octo-org/octo-repo (any ref)",
+		Subject: "repo:octo-org@123456/octo-repo@456789:*",
+		Org:     "octo-org", Project: "octo-repo",
+		OrgID: "123456", ProjectID: "456789",
+	}}
+
+	f := only(t, run(resultWith(d)), "FD011")
+	if !strings.Contains(f.Fix.TrustPolicy, sub) {
+		t.Errorf("Fix must reproduce the immutable subject verbatim.\nwant %q in:\n%s", sub, f.Fix.TrustPolicy)
+	}
+
+	// The legacy shape must not appear: it is the thing that silently fails.
+	if strings.Contains(f.Fix.TrustPolicy, "repo:octo-org/octo-repo:") {
+		t.Errorf("Fix fell back to the legacy format, which would not match:\n%s", f.Fix.TrustPolicy)
+	}
+
+	// The report itself stays readable: no ids in the human line.
+	if strings.Contains(f.ExternalParty, "@123456") {
+		t.Errorf("ExternalParty should read as a repo name, not carry ids: %q", f.ExternalParty)
+	}
+}
+
+// When the owner arrives on the immutable format but the repository is unknown,
+// the placeholder has to ask for both halves. "octo-org@123456/YOUR_REPO" would
+// be filled in as a name with no id and would not match.
+func TestFixAsksForBothHalvesOfAnImmutableRepo(t *testing.T) {
+	d := githubDoor()
+	d.Conditions[1] = model.Condition{
+		Operator: "StringLike", Key: ghIssuer + ":sub", Values: []string{"repo:octo-org@123456/*"},
+	}
+	d.ExternalParties = []model.ExternalParty{{
+		Kind: model.PartyGitHub, Scope: model.ScopeOrg, Wildcard: true,
+		Org: "octo-org", OrgID: "123456",
+		Display: "ANY repository in github.com/octo-org", Subject: "repo:octo-org@123456/*",
+	}}
+
+	f := only(t, run(resultWith(d)), "FD010")
+	if !strings.Contains(f.Fix.TrustPolicy, "octo-org@123456/YOUR_REPO@YOUR_REPO_ID") {
+		t.Errorf("Fix should ask for the repo id as well as the name:\n%s", f.Fix.TrustPolicy)
+	}
+}
+
 func TestFD011_OnlyForRefCapablePlatforms(t *testing.T) {
 	gh := githubDoor()
 	gh.ExternalParties = []model.ExternalParty{{
@@ -319,8 +376,14 @@ func TestFD012_PullRequest(t *testing.T) {
 	}}
 
 	f := only(t, run(resultWith(d)), "FD012")
-	if !strings.Contains(f.WhatIsWrong, "pull_request_target") {
-		t.Errorf("FD012 should explain the pull_request_target mechanism: %q", f.WhatIsWrong)
+	// The mechanism is that one subject covers every pull request, so the
+	// condition cannot distinguish them. Naming pull_request_target here would
+	// be asserting a subject format GitHub does not document.
+	if !strings.Contains(f.WhatIsWrong, "every pull request") {
+		t.Errorf("FD012 should explain that the subject covers every pull request: %q", f.WhatIsWrong)
+	}
+	if strings.Contains(f.WhatIsWrong, "pull_request_target") {
+		t.Errorf("FD012 must not claim pull_request_target uses this subject: %q", f.WhatIsWrong)
 	}
 }
 

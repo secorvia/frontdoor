@@ -227,18 +227,19 @@ func (c *evalContext) fd012(d *model.Door, p *model.ExternalParty) {
 	f := fromDoor(d, "FD012", model.SeverityHigh,
 		"Pull-request workflows can assume "+short(d.ResourceARN))
 	f.ExternalParty = p.Display
-	f.WhatIsWrong = "The subject condition accepts the pull_request context, which is the subject a " +
-		"pull_request_target workflow runs under. Those workflows run with the base repository's permissions " +
-		"while operating on code from the pull request."
-	f.AttackerCan = "Open a pull request whose contents are executed by a pull_request_target workflow and " +
-		"obtain this role's credentials without any write access to the repository."
+	f.WhatIsWrong = "The subject condition accepts the pull_request context. GitHub issues that same subject " +
+		"for every pull request in the repository, with no pull-request number, source branch or author in it, " +
+		"so the condition cannot tell one pull request from another."
+	f.AttackerCan = "Open a pull request and have the workflow it triggers assume this role. Required reviews " +
+		"and branch protection do not apply, because the token is issued before anything is merged."
 	f.Evidence = subjectEvidence(d, p)
 	f.Fix = model.Fix{
 		Summary:     "Restrict the subject to a ref or a protected environment instead of the pull_request context.",
 		TrustPolicy: trustPolicyFix(d, p),
 		Steps: []string{
-			"Audit every pull_request_target workflow in the repository for checkout of untrusted code.",
+			"Check which workflow needs this role, and whether it has to run on pull requests at all.",
 			"Move deployment credentials to a workflow that only runs on a protected branch or environment.",
+			"If a pull-request workflow does need cloud access, give it a separate role scoped to a test account.",
 		},
 	}
 	c.add(f)

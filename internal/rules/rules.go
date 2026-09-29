@@ -17,7 +17,10 @@ import (
 
 // DocsBase is where the per-rule explanations live. The CLI prints these, so
 // they carry the traffic back to the project's own domain rather than GitHub.
-const DocsBase = "https://secorvia.com/docs/frontdoor/"
+//
+// The host is the canonical one. secorvia.com redirects to www, and printing a
+// URL that redirects costs the reader a hop and muddles the canonical signal.
+const DocsBase = "https://www.secorvia.com/docs/frontdoor/"
 
 // Options tune the thresholds that are genuinely a matter of policy.
 type Options struct {

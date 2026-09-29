@@ -83,6 +83,15 @@ func audienceFor(d *model.Door) string {
 	return "AUDIENCE_REGISTERED_ON_THE_PROVIDER"
 }
 
+// withID re-attaches the numeric id GitHub's immutable subject format carries.
+// An empty id means the legacy format, and the name is returned untouched.
+func withID(name, id string) string {
+	if id == "" {
+		return name
+	}
+	return name + "@" + id
+}
+
 // subjectTemplate is the tightest sub value that still makes sense for the
 // platform, filled in with whatever the current policy already told us.
 func subjectTemplate(d *model.Door, p *model.ExternalParty) string {
@@ -91,13 +100,25 @@ func subjectTemplate(d *model.Door, p *model.ExternalParty) string {
 
 	switch p.Kind {
 	case model.PartyGitHub:
+		// A repository on the immutable subject format sends its numeric ids
+		// with every token. A condition written without them stops matching,
+		// so they go back exactly as they arrived: a fix that takes the
+		// pipeline down is not a fix.
+		orgPart := withID(org, p.OrgID)
+		projectPart := withID(project, p.ProjectID)
+		if p.OrgID != "" && p.ProjectID == "" && project != p.Project {
+			// The owner arrived on the immutable format but we never learned
+			// the repository, so the reader has to supply both halves of it.
+			projectPart = "YOUR_REPO@YOUR_REPO_ID"
+		}
+		repo := "repo:" + orgPart + "/" + projectPart
 		switch {
 		case p.Environment != "" && !hasGlob(p.Environment):
-			return "repo:" + org + "/" + project + ":environment:" + p.Environment
+			return repo + ":environment:" + p.Environment
 		case p.Ref != "" && !hasGlob(p.Ref):
-			return "repo:" + org + "/" + project + ":ref:" + p.Ref
+			return repo + ":ref:" + p.Ref
 		default:
-			return "repo:" + org + "/" + project + ":ref:refs/heads/main"
+			return repo + ":ref:refs/heads/main"
 		}
 	case model.PartyGitLab:
 		path := orDefault(p.Project, "YOUR_GROUP/YOUR_PROJECT")

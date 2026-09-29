@@ -70,7 +70,7 @@ func sample() *model.Result {
 					TrustPolicy: "\"Condition\": {\n  \"StringEquals\": {\n    \"x:sub\": \"repo:acme/api:ref:refs/heads/main\"\n  }\n}",
 					Steps:       []string{"Confirm which repository is supposed to use this role."},
 				},
-				DocsURL: "https://secorvia.com/docs/frontdoor/FD001",
+				DocsURL: "https://www.secorvia.com/docs/frontdoor/FD001",
 			},
 			{
 				ID: "FD013", Severity: model.SeverityHigh,
@@ -81,7 +81,7 @@ func sample() *model.Result {
 				WhatIsWrong: "Account 999988887777 can assume this role knowing only its ARN.",
 				AttackerCan: "Another customer of the same third party can ask it to assume your role ARN.",
 				Fix:         model.Fix{Summary: "Require an external id."},
-				DocsURL:     "https://secorvia.com/docs/frontdoor/FD013",
+				DocsURL:     "https://www.secorvia.com/docs/frontdoor/FD013",
 			},
 			{
 				ID: "FD021", Severity: model.SeverityMedium,
@@ -92,7 +92,7 @@ func sample() *model.Result {
 				WhatIsWrong:    "Never assumed.",
 				AttackerCan:    "Use it unnoticed.",
 				Fix:            model.Fix{Summary: "Remove it."},
-				DocsURL:        "https://secorvia.com/docs/frontdoor/FD021",
+				DocsURL:        "https://www.secorvia.com/docs/frontdoor/FD021",
 				Suppressed:     true,
 				SuppressReason: "retiring 2026-10-01, OPS-42",
 			},
@@ -223,7 +223,7 @@ func TestTerminalContent(t *testing.T) {
 		"FD001",
 		"arn:aws:iam::111122223333:role/ci-deploy",
 		"repo:acme/api:ref:refs/heads/main", // the pasteable fix survives wrapping
-		"https://secorvia.com/docs/frontdoor/FD001",
+		"https://www.secorvia.com/docs/frontdoor/FD001",
 		"SCAN GAPS",
 		"organizations:ListAccounts",
 		"2 external identities can enter your cloud.",
@@ -252,7 +252,7 @@ func TestTerminalWrappingKeepsIdentifiersIntact(t *testing.T) {
 	if !strings.Contains(out, "arn:aws:iam::111122223333:role/ci-deploy") {
 		t.Error("an ARN was broken by wrapping at width 60")
 	}
-	if !strings.Contains(out, "https://secorvia.com/docs/frontdoor/FD001") {
+	if !strings.Contains(out, "https://www.secorvia.com/docs/frontdoor/FD001") {
 		t.Error("a URL was broken by wrapping at width 60")
 	}
 }

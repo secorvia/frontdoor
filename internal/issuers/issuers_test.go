@@ -8,16 +8,18 @@ import (
 
 func TestParseSubject(t *testing.T) {
 	tests := []struct {
-		name    string
-		issuer  string
-		sub     string
-		kind    model.PartyKind
-		scope   model.Scope
-		org     string
-		project string
-		ref     string
-		env     string
-		display string
+		name      string
+		issuer    string
+		sub       string
+		kind      model.PartyKind
+		scope     model.Scope
+		org       string
+		project   string
+		orgID     string
+		projectID string
+		ref       string
+		env       string
+		display   string
 	}{
 		{
 			name: "github exact ref", issuer: "token.actions.githubusercontent.com",
@@ -127,6 +129,34 @@ func TestParseSubject(t *testing.T) {
 			sub: "", kind: model.PartyGitHub, scope: model.ScopeAnyone,
 			display: "ANY GitHub Actions tenant",
 		},
+		// GitHub's immutable subject format, issued for repositories created
+		// after 15 July 2026. The ids must be split off so the report reads
+		// normally, and kept so a fix can put them back.
+		{
+			name: "github immutable ref", issuer: "token.actions.githubusercontent.com",
+			sub:  "repo:octo-org@123456/octo-repo@456789:ref:refs/heads/main",
+			kind: model.PartyGitHub, scope: model.ScopeExact,
+			org: "octo-org", project: "octo-repo",
+			orgID: "123456", projectID: "456789",
+			ref:     "refs/heads/main",
+			display: "github.com/octo-org/octo-repo @ refs/heads/main",
+		},
+		{
+			name: "github immutable environment", issuer: "token.actions.githubusercontent.com",
+			sub:  "repo:octo-org@123456/octo-repo@456789:environment:production",
+			kind: model.PartyGitHub, scope: model.ScopeExact,
+			org: "octo-org", project: "octo-repo",
+			orgID: "123456", projectID: "456789",
+			env:     "production",
+			display: "github.com/octo-org/octo-repo env production",
+		},
+		{
+			// Still org-wide: the numeric owner id does not narrow the repo.
+			name: "github immutable org-wide is still org-wide", issuer: "token.actions.githubusercontent.com",
+			sub:  "repo:octo-org@123456/*",
+			kind: model.PartyGitHub, scope: model.ScopeOrg,
+			org: "octo-org", orgID: "123456",
+		},
 	}
 
 	for _, tt := range tests {
@@ -150,6 +180,12 @@ func TestParseSubject(t *testing.T) {
 			}
 			if tt.env != "" && p.Environment != tt.env {
 				t.Errorf("Environment = %q, want %q", p.Environment, tt.env)
+			}
+			if p.OrgID != tt.orgID {
+				t.Errorf("OrgID = %q, want %q", p.OrgID, tt.orgID)
+			}
+			if p.ProjectID != tt.projectID {
+				t.Errorf("ProjectID = %q, want %q", p.ProjectID, tt.projectID)
 			}
 			if tt.display != "" && p.Display != tt.display {
 				t.Errorf("Display = %q, want %q", p.Display, tt.display)

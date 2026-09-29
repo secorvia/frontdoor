@@ -98,6 +98,18 @@ type ExternalParty struct {
 	Workflow    string `json:"workflow,omitempty"`    // job_workflow_ref
 	Actor       string `json:"actor,omitempty"`
 
+	// OrgID and ProjectID carry the numeric ids GitHub puts in the immutable
+	// subject format it issues for repositories created after 15 July 2026:
+	//
+	//	repo:octo-org@123456/octo-repo@456789:ref:refs/heads/main
+	//
+	// Org and Project keep the plain names so the report stays readable. The
+	// ids are kept separately because a fix we suggest has to reproduce the
+	// exact shape the issuer sends; drop them and the condition stops matching,
+	// which breaks the caller's pipeline instead of securing it.
+	OrgID     string `json:"org_id,omitempty"`
+	ProjectID string `json:"project_id,omitempty"`
+
 	PullRequest bool `json:"pull_request,omitempty"` // sub admits pull_request context
 
 	AccountID string `json:"account_id,omitempty"` // cross-account trusts
