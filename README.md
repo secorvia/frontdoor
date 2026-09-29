@@ -1,20 +1,43 @@
-# frontdoor
+<h1 align="center">frontdoor</h1>
 
-**Map the federated trust *into* your cloud accounts.**
+<p align="center">
+  <strong>Map the federated trust <em>into</em> your cloud accounts.</strong><br/>
+  Who on the outside can get in, how far they reach once they do,<br/>
+  and exactly what to paste to close the door.
+</p>
+
+<p align="center">
+  <a href="https://github.com/secorvia/frontdoor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/secorvia/frontdoor/actions/workflows/ci.yml/badge.svg"/></a>
+  <a href="https://goreportcard.com/report/github.com/secorvia/frontdoor"><img alt="Go report card" src="https://goreportcard.com/badge/github.com/secorvia/frontdoor"/></a>
+  <a href="LICENSE"><img alt="Apache 2.0" src="https://img.shields.io/badge/licence-Apache%202.0-blue.svg"/></a>
+  <img alt="AWS, GCP, Azure" src="https://img.shields.io/badge/AWS%20%C2%B7%20GCP%20%C2%B7%20Azure-supported-success"/>
+  <img alt="Read only" src="https://img.shields.io/badge/writes-nothing-informational"/>
+</p>
+
+<p align="center">
+  <a href="#30-seconds">Install</a> ·
+  <a href="#what-it-finds">Rules</a> ·
+  <a href="#how-this-compares">Compared to other tools</a> ·
+  <a href="#safety">Safety</a> ·
+  <a href="https://secorvia.com/docs/frontdoor/">Docs</a>
+</p>
+
+---
 
 Every cloud security scanner looks at what is *inside* an account. None of them
 map the doors leading *in* — the OIDC, SAML and cross-account trusts that let a
 GitHub repository, a CI pipeline, a SaaS vendor or another cloud obtain
 credentials in your account.
 
-`frontdoor` reads those doors and tells you, in plain language, **who on the
-outside can get in, what they can reach once they do, and exactly what to paste
-to close the door.**
+Those doors are where the interesting failures live. A workflow in a repository
+nobody reviews, trusted by a role nobody audits, is a shorter path into
+production than any exploit. `frontdoor` reads every one of them and reports it
+in plain language, with the fix.
 
 ```
 $ frontdoor scan
 
-  frontdoor 0.5.0  ·  acme-prod (111122223333), acme-prod  ·  2026-09-25 09:12 UTC
+  frontdoor 0.1.0  ·  acme-prod (111122223333), acme-prod  ·  2026-09-25 09:12 UTC
 
   ▐ WHO CAN GET IN ────────────────────────────────────────────────────────────
 
@@ -170,6 +193,39 @@ block built from the door's real issuer, org and repo.
   "steps": ["Confirm which repository is supposed to use this role.", "..."]
 }
 ```
+
+---
+
+## How this compares
+
+The cloud security space is crowded and several of these tools are excellent.
+`frontdoor` is not trying to replace them, and pretending otherwise would be an
+easy claim to disprove.
+
+| Tool | What it is best at | Where it stops |
+|---|---|---|
+| [**Prowler**](https://github.com/prowler-cloud/prowler) | 600+ checks across AWS, Azure, GCP, Kubernetes. The broadest coverage available. | Attack-path analysis needs Prowler App — Docker Compose plus Neo4j. Individual trust checks, no end-to-end path. |
+| [**Cartography**](https://github.com/lyft/cartography) | Graphs AWS, GCP, Azure, GitHub and Okta into one model. Genuinely powerful. | Requires a Neo4j deployment and Cypher queries you write yourself. It is infrastructure, not a command. |
+| [**PMapper**](https://github.com/nccgroup/PMapper) | IAM privilege-escalation paths within an account. | AWS only, inside one account. Federation into the account is out of scope. |
+| [**github-oidc-checker**](https://github.com/rezonatelabs) | Exactly our FD001/FD002 — GitHub OIDC `sub` and `aud` conditions. | GitHub only, AWS only, one check. |
+| [**ScoutSuite**](https://github.com/nccgroup/ScoutSuite) | Multi-cloud configuration audit. | No commit since May 2024. |
+| **frontdoor** | The doors *into* an account, and the path from an outside identity to what it finally reaches — including **across cloud boundaries**. One binary. | Not a general CSPM. No bucket ACLs, security groups, encryption or compliance frameworks. |
+
+**Two things here are genuinely not available elsewhere in open source:**
+
+1. **Cross-cloud trust paths (FD031).** The AWS → GCP workload-identity attack is
+   well documented and widely written about. No open-source tool detects it,
+   because detecting it requires joining two clouds' views of the same identity —
+   the assumed-role ARN inside a GCP provider subject, or a service account's
+   numeric unique id inside an AWS trust policy. `frontdoor` does that join.
+
+2. **Path analysis with no infrastructure.** Every tool above that follows paths
+   wants a graph database first. That is a reasonable design for a platform and a
+   fatal one for a thing you run once to answer a question. `frontdoor` is a
+   single static binary with no daemon, no database and no config file.
+
+If you already run Prowler, run this alongside it. It answers a question Prowler
+does not ask.
 
 ---
 
@@ -696,8 +752,49 @@ false positives come from.
 
 ---
 
+## Documentation
+
+Every rule has a page explaining the risk, what an attacker actually does with
+it, and how to fix it:
+
+**[secorvia.com/docs/frontdoor](https://secorvia.com/docs/frontdoor/)**
+
+| | | |
+|---|---|---|
+| [FD001](https://secorvia.com/docs/frontdoor/FD001) Unpinned subject | [FD002](https://secorvia.com/docs/frontdoor/FD002) Missing audience | [FD003](https://secorvia.com/docs/frontdoor/FD003) Open door to escalation |
+| [FD005](https://secorvia.com/docs/frontdoor/FD005) Wrong-issuer condition | [FD010](https://secorvia.com/docs/frontdoor/FD010) Org-wide subject | [FD011](https://secorvia.com/docs/frontdoor/FD011) Any branch or tag |
+| [FD012](https://secorvia.com/docs/frontdoor/FD012) `pull_request` accepted | [FD013](https://secorvia.com/docs/frontdoor/FD013) No `ExternalId` | [FD014](https://secorvia.com/docs/frontdoor/FD014) Unidentified account |
+| [FD015](https://secorvia.com/docs/frontdoor/FD015) Trust on a name | [FD020](https://secorvia.com/docs/frontdoor/FD020) Long-lived keys | [FD021](https://secorvia.com/docs/frontdoor/FD021) Unused provider |
+| [FD022](https://secorvia.com/docs/frontdoor/FD022) Stale thumbprint | [FD030](https://secorvia.com/docs/frontdoor/FD030) Impersonation chain | [FD031](https://secorvia.com/docs/frontdoor/FD031) Cross-cloud chain |
+
+The same pages are in [`docs/rules/`](docs/rules/) in this repository, so they
+work offline and in air-gapped environments.
+
+---
+
+## Continuous monitoring
+
+`frontdoor` answers the question once, when you run it. That is the right shape
+for a CLI and it is deliberately all it does.
+
+If you want the same analysis running continuously across every account, with
+history, drift alerts when a trust policy loosens, and one view across AWS, GCP
+and Azure, that is [**Secorvia**](https://secorvia.com) — cloud security posture
+management built by the same team. There is a free tier and it does not ask for
+a card.
+
+The CLI is not a trial of it. It has no feature gates, no licence check, no
+telemetry, and it never expires. If it is all you ever need, that is a fine
+outcome.
+
+---
+
 ## Licence
 
 Apache 2.0. See [LICENSE](LICENSE).
 
-Built by the team behind [Secorvia](https://secorvia.com).
+Security issues: see [SECURITY.md](SECURITY.md). Contributions:
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Built by the team behind [Secorvia](https://secorvia.com) — cloud security
+posture management for AWS, GCP and Azure.
