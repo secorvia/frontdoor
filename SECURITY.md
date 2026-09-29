@@ -7,7 +7,7 @@ Email **security@secorvia.com**. Please do not open a public issue first.
 You can also use GitHub's private reporting: **Security → Report a
 vulnerability** on this repository.
 
-Include whatever you have a trust policy that reproduces it, the command you
+Include whatever you have: a trust policy that reproduces it, the command you
 ran, the output you got and the output you expected. A redacted policy document
 is usually enough; we do not need your account id.
 
@@ -25,7 +25,7 @@ thing it can do is be wrong in the reassuring direction:
 - **Anything that writes.** `frontdoor` makes no mutating API calls. A code
   path that does is a bug, regardless of whether it causes damage.
 - **Anything that sends data anywhere.** The only outbound connections are to
-  your cloud provider's own APIs, plus with `--resolve` explicitly passed —
+  your cloud provider's own APIs, plus, when `--resolve` is explicitly passed,
   a TLS handshake to each OIDC issuer to check its thumbprint. Any other
   network call, including telemetry or crash reporting, is a bug.
 - **Credential leakage.** A secret, key or token written to stdout, to a

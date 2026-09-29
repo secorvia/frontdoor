@@ -2,8 +2,7 @@
 
 <p align="center">
   <strong>Map the federated trust <em>into</em> your cloud accounts.</strong><br/>
-  Who on the outside can get in, how far they reach once they do,<br/>
-  and exactly what to paste to close the door.
+  Who outside can get in, and how far they get once they are in.
 </p>
 
 <p align="center">
@@ -25,14 +24,14 @@
 ---
 
 Every cloud security scanner looks at what is *inside* an account. None of them
-map the doors leading *in* the OIDC, SAML and cross-account trusts that let a
+map the doors leading *in*: the OIDC, SAML and cross-account trusts that let a
 GitHub repository, a CI pipeline, a SaaS vendor or another cloud obtain
 credentials in your account.
 
-Those doors are where the interesting failures live. A workflow in a repository
-nobody reviews, trusted by a role nobody audits, is a shorter path into
-production than any exploit. `frontdoor` reads every one of them and reports it
-in plain language, with the fix.
+They are easy to get wrong and nothing flags them when you do. A role that
+trusts a GitHub repository looks identical in an inventory whether the trust is
+pinned to one branch of one repo or left open to every repository on GitHub.
+`frontdoor` reads the trust policy and tells you which one it is.
 
 ```
 $ frontdoor scan
@@ -60,8 +59,9 @@ $ frontdoor scan
                      token.actions.githubusercontent.com:sub, so the subject
                      claim is never checked.
            Attacker  Anyone able to get a token from
-                     token.actions.githubusercontent.com — which on a public CI
-                     platform means anyone at all — can assume this role.
+                     token.actions.githubusercontent.com - which on a public CI
+                     platform means anyone at all - can assume this role and
+                     use everything it grants.
            Fix       Pin the subject claim to the exact identity you intend to
                      trust.
 
@@ -80,10 +80,9 @@ $ frontdoor scan
 ```
 
 > **Status: feature complete.** AWS, GCP and Azure (beta), 15 rules, the full
-> output layer, and the thing this project exists for: following a trust edge
-> from one cloud into another.
+> output layer, and cross-cloud chains.
 >
-> Requires **Go 1.26** to build — see the dependency note under Safety.
+> Requires **Go 1.26** to build. See the dependency note under Safety.
 
 ## 30 seconds
 
@@ -92,8 +91,8 @@ go install github.com/secorvia/frontdoor/cmd/frontdoor@latest
 frontdoor scan
 ```
 
-It uses whatever credentials you already have — `~/.aws`, `gcloud auth
-application-default`, `az login` — reads nothing else, writes nothing anywhere,
+It uses whatever credentials you already have (`~/.aws`, `gcloud auth
+application-default`, `az login`), reads nothing else, writes nothing anywhere,
 and prints the report above. No config file, no account, no signup.
 
 
@@ -103,43 +102,43 @@ and prints the report above. No config file, no account, no signup.
 
 | ID | Severity | What it catches |
 |---|---|---|
-| **FD001** | critical¹ | No condition on the subject claim — any tenant of that issuer can assume the role |
-| **FD002** | critical→medium² | No condition on the audience claim |
+| **FD001** | critical¹ | No condition on the subject claim, so any tenant of that issuer can assume the role |
+| **FD002** | critical to medium² | No condition on the audience claim |
 | **FD003** | critical | An open door on a role that can escalate to account takeover |
-| **FD005** | medium | Subject condition namespaced to the **wrong issuer** — AWS never evaluates it |
-| **FD010** | high | Org-wide subject (`repo:acme/*`) — any repository in the org |
+| **FD005** | medium | Subject condition namespaced to the **wrong issuer**, so AWS never evaluates it |
+| **FD010** | high | Org-wide subject (`repo:acme/*`), meaning any repository in the org |
 | **FD011** | high | Repository pinned but **any branch or tag** can assume |
 | **FD012** | high | The `pull_request` context is accepted (`pull_request_target` risk) |
-| **FD013** | high³ | Cross-account trust with no `sts:ExternalId` — the confused deputy |
+| **FD013** | high³ | Cross-account trust with no `sts:ExternalId`, the confused deputy |
 | **FD014** | high³ | Trust to an account that is neither yours nor a vendor we can identify |
-| **FD015** | high | Trust rests on `repository_owner` alone — a name, not a stable id |
+| **FD015** | high | Trust rests on `repository_owner` alone, which is a name, not a stable id |
 | **FD020** | medium | Long-lived access keys still active on an account that uses federation |
 | **FD021** | medium | Unused identity provider, or an external trust never assumed |
 | **FD022** | medium/low | OIDC thumbprint missing, or not matching the issuer's current cert (AWS only) |
-| **FD030** | critical/high | **Chain** — a federated identity that reaches something privileged, or a data store, through one or more hops |
-| **FD031** | critical/high | **Cross-cloud chain** — the path leaves the cloud it started in |
+| **FD030** | critical/high | **Chain.** A federated identity that reaches something privileged, or a data store, through one or more hops |
+| **FD031** | critical/high | **Cross-cloud chain.** The path leaves the cloud it started in |
 
-¹ **high** instead when the door is held by a real narrowing condition
-(`aws:PrincipalOrgID`, `sts:ExternalId`, …), or when it is a SAML trust — that
-admits every user of *your* IdP, which is too wide but is not the open internet.
+¹ **high** instead when the door is held by a real narrowing condition such as
+`aws:PrincipalOrgID` or `sts:ExternalId`, and also for a SAML trust, which
+admits every user of *your* IdP. That is too wide, but it is not the open
+internet.
 
-² Severity is contextual, and this is a deliberate departure from a flat
-"critical". Missing `aud` **with no subject condition** means any token that
-issuer ever minted is accepted → critical. Missing `aud` **with an exact
-subject** is hardening → medium. On GitHub the workflow chooses its own `aud`,
-so `aud` was never the barrier there; `sub` is. Crying critical on a safe
-config is how a scanner gets uninstalled.
+² Severity here is contextual rather than a flat "critical", which is a
+deliberate departure. Missing `aud` **with no subject condition** means any
+token that issuer ever minted is accepted, so that is critical. Missing `aud`
+**with an exact subject** is a hardening gap, so medium. On GitHub the workflow
+chooses its own `aud` anyway, so `aud` was never the barrier there; `sub` is.
 
-³ **medium** when `organizations:ListAccounts` was denied, because the tool
-cannot then prove the account is a stranger — and says so in the finding.
+³ **medium** when `organizations:ListAccounts` was denied. The tool cannot then
+prove the account is a stranger, and the finding says so.
 
 ### FD030 and FD031 are the ones other tools miss
 
-A chain inside one cloud — every hop individually unremarkable:
+A chain inside one cloud, where every hop on its own looks unremarkable:
 
 ```
-github.com/acme/api @ main  →  ci@acme-prod       (no privileges — looks fine)
-                            →  build@acme-prod    (no privileges — looks fine)
+github.com/acme/api @ main  →  ci@acme-prod       (no privileges, looks fine)
+                            →  build@acme-prod    (no privileges, looks fine)
                             →  deploy@acme-prod   ← roles/owner
 ```
 
@@ -148,8 +147,8 @@ A scanner that reports the first hop tells you the repository can become
 `roles/iam.serviceAccountTokenCreator` edges to the end and reports the whole
 path, the weakest link on it, and which binding to remove.
 
-**And the one nothing else reports at all** a chain that leaves the cloud it
-started in:
+And the case nothing else reports at all: a chain that leaves the cloud it
+started in.
 
 ```
   ▐ HOW FAR THEY GET ──────────────────────────────────────────
@@ -165,26 +164,25 @@ identity binding from "some AWS role" and has no idea a public CI platform is
 on the other end of it. **Neither of them is wrong, and neither of them reports
 this path.** `frontdoor` joins the two halves through the assumed-role ARN a
 GCP AWS-provider records, or through the numeric service-account id an AWS
-trust policy carries — and walks straight through the seam.
+trust policy carries, and walks straight through the seam.
 
 If only one cloud was scanned, no edge is drawn: an account we were never
 pointed at is genuinely outside, and inventing a node we know nothing about
 would be worse than stopping.
 
 Chains are ranked by **entry looseness × terminal sensitivity**, never by
-length and a cross-cloud path outranks a same-cloud one at equal weight,
-because it is the one nobody's tooling is watching. A two-hop chain from "any
-GitHub repository" into project owner beats a five-hop chain from one pinned
-branch into a log bucket.
+length. At equal weight a cross-cloud path ranks above a same-cloud one. A
+two-hop chain from "any GitHub repository" into project owner beats a five-hop
+chain from one pinned branch into a log bucket.
 
 The terminal is classified by what it actually holds, not just whether it can
 escalate: `roles/bigquery.dataViewer` is not a privilege escalation, and a
 tool that only looks for escalation would call that chain harmless.
 
-Every finding carries: rule id, severity, the exact resource ARN, one sentence
-on **what is wrong**, one sentence on **what an attacker could do**, the policy
-text it rests on as evidence, and a **fix** — including a corrected `Condition`
-block built from the door's real issuer, org and repo.
+Every finding carries the rule id, severity, the exact resource ARN, one
+sentence on what is wrong, one sentence on what an attacker could do, the policy
+text it rests on as evidence, and a fix. The fix includes a corrected
+`Condition` block built from the door's real issuer, org and repo.
 
 ```jsonc
 "fix": {
@@ -204,25 +202,25 @@ easy claim to disprove.
 
 | Tool | What it is best at | Where it stops |
 |---|---|---|
-| [**Prowler**](https://github.com/prowler-cloud/prowler) | 600+ checks across AWS, Azure, GCP, Kubernetes. The broadest coverage available. | Attack-path analysis needs Prowler App — Docker Compose plus Neo4j. Individual trust checks, no end-to-end path. |
+| [**Prowler**](https://github.com/prowler-cloud/prowler) | 600+ checks across AWS, Azure, GCP, Kubernetes. The broadest coverage available. | Attack-path analysis needs Prowler App, which means Docker Compose plus Neo4j. Individual trust checks, no end-to-end path. |
 | [**Cartography**](https://github.com/lyft/cartography) | Graphs AWS, GCP, Azure, GitHub and Okta into one model. Genuinely powerful. | Requires a Neo4j deployment and Cypher queries you write yourself. It is infrastructure, not a command. |
 | [**PMapper**](https://github.com/nccgroup/PMapper) | IAM privilege-escalation paths within an account. | AWS only, inside one account. Federation into the account is out of scope. |
-| [**github-oidc-checker**](https://github.com/rezonatelabs) | Exactly our FD001/FD002 — GitHub OIDC `sub` and `aud` conditions. | GitHub only, AWS only, one check. |
+| [**github-oidc-checker**](https://github.com/rezonatelabs) | Exactly our FD001/FD002: GitHub OIDC `sub` and `aud` conditions. | GitHub only, AWS only, one check. |
 | [**ScoutSuite**](https://github.com/nccgroup/ScoutSuite) | Multi-cloud configuration audit. | No commit since May 2024. |
 | **frontdoor** | The doors *into* an account, and the path from an outside identity to what it finally reaches, including **across cloud boundaries**. One binary. | Not a general CSPM. No bucket ACLs, security groups, encryption or compliance frameworks. |
 
 **Two things here are genuinely not available elsewhere in open source:**
 
-1. **Cross-cloud trust paths (FD031).** The AWS → GCP workload-identity attack is
-   well documented and widely written about. No open-source tool detects it,
-   because detecting it requires joining two clouds' views of the same identity
+1. **Cross-cloud trust paths (FD031).** The AWS-to-GCP workload-identity attack
+   is well documented and widely written about. No open-source tool detects it,
+   because detecting it requires joining two clouds' views of the same identity:
    the assumed-role ARN inside a GCP provider subject, or a service account's
    numeric unique id inside an AWS trust policy. `frontdoor` does that join.
 
 2. **Path analysis with no infrastructure.** Every tool above that follows paths
-   wants a graph database first. That is a reasonable design for a platform and a
-   fatal one for a thing you run once to answer a question. `frontdoor` is a
-   single static binary with no daemon, no database and no config file.
+   wants a graph database first. That is a reasonable design for a platform,
+   and the wrong one for something you run once to answer a question.
+   `frontdoor` is a single static binary with no daemon, database or config file.
 
 If you already run Prowler, run this alongside it. It answers a question Prowler
 does not ask.
@@ -234,7 +232,7 @@ does not ask.
 | | |
 |---|---|
 | **OIDC providers** | issuer URL, registered audiences, thumbprints |
-| **SAML providers** | entityID, validity — the metadata document is never stored |
+| **SAML providers** | entityID and validity. The metadata document is never stored |
 | **Every IAM role trust policy** | parsed into structured doors, one per external principal |
 | **Subject claims** | GitHub Actions, GitLab CI, CircleCI, Terraform Cloud, Vercel, Buildkite, Bitbucket Pipelines, Google (AWS↔GCP federation) |
 | **Cross-account trusts** | account id, `sts:ExternalId` presence, known-vendor labelling |
@@ -250,19 +248,19 @@ On **GCP**:
 | **Service account IAM policies** | every `roles/iam.workloadIdentityUser` binding, joined to the provider behind its pool |
 | **Impersonation edges** | `serviceAccountTokenCreator`, `serviceAccountUser`, `workloadIdentityUser` between service accounts |
 | **Project IAM policy** | external principals bound directly, and which roles each service account holds |
-| **User-managed SA keys** | creation date — the GCP name for the same mistake as a static access key |
+| **User-managed SA keys** | creation date. GCP's name for the same mistake as a static access key |
 
 A GCP "door" is not one object. A provider says which outside identities
 *exist*; a service-account binding says which of them may *become* that
 account. Neither half means anything on its own, so `frontdoor` always joins
-them — and a binding naming `principalSet://.../workloadIdentityPools/POOL/*`
+them, and a binding naming `principalSet://.../workloadIdentityPools/POOL/*`
 is the GCP spelling of "any repository on GitHub".
 
 Three GCP behaviours are deliberately **not** copied from the AWS rules,
 because a literal translation would flag correct configuration:
 
-- An empty `allowedAudiences` is GCP's **secure default** — the audience
-  becomes the provider's own canonical resource name — so FD002 does not fire
+- An empty `allowedAudiences` is GCP's **secure default**: the audience
+  becomes the provider's own canonical resource name, so FD002 does not fire
   on it. It fires on a *custom* audience that is not tied to this provider.
 - GCP does not report last-used for service-account keys, so FD020 never says
   "never used" about one. It flags on age, and says the last use is not
@@ -294,7 +292,7 @@ and the second as `github.com/acme/api @ refs/heads/main` (no finding).
 It also handles a third case most tools get wrong: a `sub` condition written
 against a **different** issuer's namespace. AWS never puts that key in the
 request context, so a plain `StringEquals` evaluates false and the role can be
-assumed by **nobody**. That is a *broken* door, not an open one — reported as
+assumed by **nobody**. That is a *broken* door, not an open one, reported as
 FD005 (medium), never as a wide-open critical.
 
 ---
@@ -308,7 +306,7 @@ go install github.com/secorvia/frontdoor/cmd/frontdoor@latest
 # Homebrew
 brew install secorvia/tap/frontdoor
 
-# Script — verifies the SHA-256 against the signed checksums file before
+# Script: verifies the SHA-256 against the signed checksums file before
 # unpacking, and the cosign signature too if cosign is installed
 curl -fsSL https://raw.githubusercontent.com/secorvia/frontdoor/main/install.sh | sh
 ```
@@ -323,7 +321,7 @@ go build -o frontdoor ./cmd/frontdoor
 
 ### Verifying a release
 
-Release archives are signed keyless through the GitHub Actions OIDC identity —
+Release archives are signed keyless through the GitHub Actions OIDC identity,
 the same mechanism this tool audits, used the way it should be: the signature
 is bound to the exact workflow and ref that produced the artifact.
 
@@ -337,9 +335,9 @@ cosign verify-blob checksums.txt \
 sha256sum -c checksums.txt --ignore-missing
 ```
 
-If you would rather not pipe a script into a shell — a reasonable position for
-a security tool — use `go install`, or take the archive from the releases page
-and check it by hand.
+If you would rather not pipe a script into a shell, which is a reasonable
+position for a security tool, use `go install`, or take the archive from the
+releases page and check it by hand.
 
 ---
 
@@ -352,7 +350,7 @@ frontdoor scan --aws
 # Fail a CI job on anything high or worse
 frontdoor scan --aws --fail-on high
 
-# Collect only, no rules — then evaluate somewhere else
+# Collect only, no rules, then evaluate somewhere else
 frontdoor scan --aws --no-rules --output doors.json
 ```
 
@@ -370,9 +368,9 @@ frontdoor scan --aws | jq -r '.findings[] | "\(.id) \(.resource_arn)"'
 | `--aws` | scan AWS |
 | `--gcp` | scan GCP with Application Default Credentials |
 | `--gcp-project <ids>` | comma-separated project ids to scan |
-| `--gcp-all-projects` | scan every project the caller can see (off by default — on a large org that is thousands of calls nobody asked for) |
+| `--gcp-all-projects` | scan every project the caller can see (off by default; on a large org that is thousands of calls nobody asked for) |
 | `--gcp-credentials <f>` | a service-account key file instead of ADC |
-| `--azure` | recognised, not implemented yet — the CLI says so rather than scanning nothing |
+| `--azure` | recognised, not implemented yet; the CLI says so rather than scanning nothing |
 | `--format <fmt>` | `terminal` (default), `json`, `sarif`, `mermaid` |
 | `--color <when>` | `auto` (default), `always`, `never`. `NO_COLOR` always wins |
 | `--profile <name>` | AWS shared-config profile |
@@ -390,7 +388,7 @@ frontdoor scan --aws | jq -r '.findings[] | "\(.id) \(.resource_arn)"'
 | `--no-rules` | collect only; do not evaluate detection rules |
 | `--stale-days <n>` | unused for this many days counts as stale (default 90) |
 | `--max-key-age <n>` | an active access key older than this is flagged (default 90) |
-| `--resolve` | verify OIDC thumbprints over TLS — **off by default**, see Safety |
+| `--resolve` | verify OIDC thumbprints over TLS. **Off by default**, see Safety |
 | `--no-resolve` | force that off, overriding `--resolve` |
 
 **Exit codes:** `0` clean, `1` findings at or above `--fail-on`, `2` tool error.
@@ -420,7 +418,7 @@ Findings land in the **GitHub Security tab** as code-scanning alerts, with the
 fix in the alert body. The report also goes to the job summary. A full example
 is in [`examples/github-workflow.yml`](examples/github-workflow.yml).
 
-The example authenticates with GitHub OIDC — the mechanism `frontdoor` audits —
+The example authenticates with GitHub OIDC, the mechanism `frontdoor` audits,
 so no long-lived key appears anywhere in the workflow.
 
 ### Other formats
@@ -472,14 +470,13 @@ many were suppressed. A finding you cannot see is one nobody ever re-examines.
 
 ## Safety
 
-These are guarantees, not intentions — check them against the source:
+These are guarantees, not intentions. Check them against the source:
 
 - **Strictly read-only.** Every AWS call is a `List`, `Get` or `Describe`; every
   GCP call is a `List`, `Get` or `Search`; every Azure call that reads your
   tenant is a `GET`. The single `POST` anywhere in the tool is the OAuth token
-  request that authenticates you to Azure — it creates nothing. There is no code
-  path in this repository that mutates a resource, and CI fails the build if one
-  appears.
+  request that authenticates you to Azure, and it creates nothing. No code path
+  in this repository mutates a resource, and CI fails the build if one appears.
 - **No telemetry.** No analytics, no phone-home, no update check, ever.
 - **One optional outbound connection.** `--resolve` opens a TLS handshake to
   each OIDC issuer to read the certificate chain for FD022, then closes it
@@ -492,7 +489,7 @@ These are guarantees, not intentions — check them against the source:
 - **Denied calls are reported, never hidden.** Anything the scan could not read
   appears in `.unreadable` and in the summary line, and rules that depend on
   the missing data say so and lower their own severity rather than guess.
-- **Dependencies are the official cloud SDKs and nothing else** — the AWS SDK
+- **Dependencies are the official cloud SDKs and nothing else.** The AWS SDK
   for Go v2 and the Google API client. Everything in this repository is the Go
   standard library on top of those: no CLI framework, no logging framework, no
   CEL engine, no HTTP client of our own.
@@ -502,7 +499,7 @@ These are guarantees, not intentions — check them against the source:
 > real increase in what you have to trust, and it is the cost of using the
 > vendor's own client rather than hand-rolling requests against an IAM API. It
 > also raises the Go floor to 1.26. If you scan AWS only, none of that code
-> executes — but it is still in the binary, and you should know that.
+> executes, but it is still in the binary, and you should know that.
 
 ---
 
@@ -570,7 +567,8 @@ so rather than silently scanning nothing.
 Missing `iam.serviceAccounts.getIamPolicy` on some accounts is the common case,
 and it degrades honestly: those accounts produce no doors, the denial is listed
 in `.unreadable`, and FD030 chains that would have passed through them simply
-do not appear — the report never implies the graph is complete when it is not.
+do not appear, and the report never implies the graph is complete when it is
+not.
 
 ### Azure (beta)
 
@@ -595,13 +593,13 @@ The built-in **Reader** role plus **Security Reader** covers the ARM half.
 access at all.
 
 Credentials, tried in this order: `AZURE_FEDERATED_TOKEN_FILE` (workload
-identity — the same mechanism the tool audits), `AZURE_CLIENT_SECRET`, the
+identity, the same mechanism the tool audits), `AZURE_CLIENT_SECRET`, the
 instance metadata service, then the Azure CLI. There is deliberately **no
 interactive browser or device-code flow**: a scanner that pops a browser cannot
 run unattended, and `az login` already covers the human case.
 
 > **Why Azure is marked beta.** The mapping onto the shared model is newer than
-> the AWS and GCP ones, and Azure has more shapes of federation than either —
+> the AWS and GCP ones, and Azure has more shapes of federation than either,
 > app registrations, user-assigned managed identities, multi-tenant apps and
 > guest accounts all admit someone from outside. The findings are worth
 > reading; they are not yet worth failing a build on without looking. Guest
@@ -614,11 +612,11 @@ told from a same-account one) and `iam:ListRoles`. Missing any other permission
 degrades one section, is listed in `.unreadable`, and is accounted for in the
 findings:
 
-- No `organizations:*` — normal from a member account. FD013 and FD014 drop to
-  medium and say the organization could not be read.
-- No `iam:GetRole` — last-used dates are missing, so FD021 stays quiet rather
-  than calling every role stale.
-- No `iam:GetPolicyVersion` — granted actions are incomplete and the door is
+- No `organizations:*`, which is normal from a member account. FD013 and FD014
+  drop to medium and say the organization could not be read.
+- No `iam:GetRole`, so last-used dates are missing. FD021 then stays quiet
+  rather than calling every role stale.
+- No `iam:GetPolicyVersion`, so granted actions are incomplete and the door is
   marked `policies_partial`. An AWS-managed admin policy still flags FD003 from
   its ARN alone.
 
@@ -632,13 +630,13 @@ Credentials come from the standard AWS chain: environment variables,
 
 A cross-account trust to `464622532012` is Datadog, not an intruder.
 `frontdoor` labels the vendor accounts it can identify, and every built-in
-entry cites the vendor doc it came from — see
+entry cites the vendor doc it came from. See
 [`internal/awscollect/vendors.go`](internal/awscollect/vendors.go).
 
 **Verify before you rely on it.** A wrong label tells you an unknown account is
 a vendor, so the list is deliberately short: only ids published by the vendor
 itself are included. Vendors that provision per-tenant accounts (Wiz, Orca,
-Snyk) cannot be covered by a static map at all those get a *possibly* label
+Snyk) cannot be covered by a static map at all. Those get a *possibly* label
 matched on the role name, and FD014 still fires, because a guess from a name is
 not an identification.
 
@@ -653,7 +651,7 @@ Add your own partners without forking:
 frontdoor scan --aws --vendors partners.json
 ```
 
-PRs adding vendor account ids are welcome — include the vendor doc URL.
+PRs adding vendor account ids are welcome; include the vendor doc URL.
 
 ---
 
@@ -691,7 +689,7 @@ PRs adding vendor account ids are welcome — include the vendor doc URL.
 | `exact` | one repository, one ref |
 | `project` | one repository, any ref |
 | `org` | any repository in one org |
-| `anyone` | any customer of that issuer — **this is the one that matters** |
+| `anyone` | any customer of that issuer. **This is the one that matters** |
 | `account` | an entire AWS account |
 | `unknown` | conditions present but not evaluable for this provider |
 
@@ -705,7 +703,7 @@ PRs adding vendor account ids are welcome — include the vendor doc URL.
 | **2 ✅** | 13 detection rules, fixes, `.frontdoorignore`, `--fail-on` |
 | **3 ✅** | Terminal report, SARIF for the GitHub Security tab, mermaid graph, GitHub Action |
 | **4 ✅** | GCP: workload identity pools, providers, FD030 impersonation chains |
-| **5 ✅** | **Cross-cloud chains** a trust edge followed from GitHub → AWS → GCP → BigQuery |
+| **5 ✅** | **Cross-cloud chains**: a trust edge followed from GitHub → AWS → GCP → BigQuery |
 | **6 ✅** | Azure (beta), signed releases, Homebrew, per-rule docs |
 
 Phase 5 is the reason the project exists, and it is done. No other open-source
@@ -747,7 +745,7 @@ would trust the output:
   Windows.
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the rule-authoring guide, including the
-three worked examples of *not copying a rule across clouds* — which is where
+three worked examples of *not copying a rule across clouds*, which is where
 false positives come from.
 
 ---
@@ -779,7 +777,7 @@ for a CLI and it is deliberately all it does.
 
 If you want the same analysis running continuously across every account, with
 history, drift alerts when a trust policy loosens, and one view across AWS, GCP
-and Azure, that is [**Secorvia**](https://secorvia.com) cloud security posture 
+and Azure, that is [**Secorvia**](https://secorvia.com), cloud security posture
 management built by the same team. There is a free tier and it does not ask for
 a card.
 
@@ -796,5 +794,5 @@ Apache 2.0. See [LICENSE](LICENSE).
 Security issues: see [SECURITY.md](SECURITY.md). Contributions:
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Built by the team behind [Secorvia](https://secorvia.com) — cloud security
+Built by the team behind [Secorvia](https://secorvia.com), cloud security
 posture management for AWS, GCP and Azure.
