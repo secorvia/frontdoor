@@ -25,7 +25,7 @@
 ---
 
 Every cloud security scanner looks at what is *inside* an account. None of them
-map the doors leading *in* — the OIDC, SAML and cross-account trusts that let a
+map the doors leading *in* the OIDC, SAML and cross-account trusts that let a
 GitHub repository, a CI pipeline, a SaaS vendor or another cloud obtain
 credentials in your account.
 
@@ -148,7 +148,7 @@ A scanner that reports the first hop tells you the repository can become
 `roles/iam.serviceAccountTokenCreator` edges to the end and reports the whole
 path, the weakest link on it, and which binding to remove.
 
-**And the one nothing else reports at all** — a chain that leaves the cloud it
+**And the one nothing else reports at all** a chain that leaves the cloud it
 started in:
 
 ```
@@ -163,7 +163,7 @@ started in:
 Your AWS scanner stops at `role/ci-deploy`. Your GCP scanner sees a workload
 identity binding from "some AWS role" and has no idea a public CI platform is
 on the other end of it. **Neither of them is wrong, and neither of them reports
-this path.** `frontdoor` joins the two halves — through the assumed-role ARN a
+this path.** `frontdoor` joins the two halves through the assumed-role ARN a
 GCP AWS-provider records, or through the numeric service-account id an AWS
 trust policy carries — and walks straight through the seam.
 
@@ -172,7 +172,7 @@ pointed at is genuinely outside, and inventing a node we know nothing about
 would be worse than stopping.
 
 Chains are ranked by **entry looseness × terminal sensitivity**, never by
-length — and a cross-cloud path outranks a same-cloud one at equal weight,
+length and a cross-cloud path outranks a same-cloud one at equal weight,
 because it is the one nobody's tooling is watching. A two-hop chain from "any
 GitHub repository" into project owner beats a five-hop chain from one pinned
 branch into a log bucket.
@@ -209,13 +209,13 @@ easy claim to disprove.
 | [**PMapper**](https://github.com/nccgroup/PMapper) | IAM privilege-escalation paths within an account. | AWS only, inside one account. Federation into the account is out of scope. |
 | [**github-oidc-checker**](https://github.com/rezonatelabs) | Exactly our FD001/FD002 — GitHub OIDC `sub` and `aud` conditions. | GitHub only, AWS only, one check. |
 | [**ScoutSuite**](https://github.com/nccgroup/ScoutSuite) | Multi-cloud configuration audit. | No commit since May 2024. |
-| **frontdoor** | The doors *into* an account, and the path from an outside identity to what it finally reaches — including **across cloud boundaries**. One binary. | Not a general CSPM. No bucket ACLs, security groups, encryption or compliance frameworks. |
+| **frontdoor** | The doors *into* an account, and the path from an outside identity to what it finally reaches, including **across cloud boundaries**. One binary. | Not a general CSPM. No bucket ACLs, security groups, encryption or compliance frameworks. |
 
 **Two things here are genuinely not available elsewhere in open source:**
 
 1. **Cross-cloud trust paths (FD031).** The AWS → GCP workload-identity attack is
    well documented and widely written about. No open-source tool detects it,
-   because detecting it requires joining two clouds' views of the same identity —
+   because detecting it requires joining two clouds' views of the same identity
    the assumed-role ARN inside a GCP provider subject, or a service account's
    numeric unique id inside an AWS trust policy. `frontdoor` does that join.
 
@@ -638,7 +638,7 @@ entry cites the vendor doc it came from — see
 **Verify before you rely on it.** A wrong label tells you an unknown account is
 a vendor, so the list is deliberately short: only ids published by the vendor
 itself are included. Vendors that provision per-tenant accounts (Wiz, Orca,
-Snyk) cannot be covered by a static map at all — those get a *possibly* label
+Snyk) cannot be covered by a static map at all those get a *possibly* label
 matched on the role name, and FD014 still fires, because a guess from a name is
 not an identification.
 
@@ -705,7 +705,7 @@ PRs adding vendor account ids are welcome — include the vendor doc URL.
 | **2 ✅** | 13 detection rules, fixes, `.frontdoorignore`, `--fail-on` |
 | **3 ✅** | Terminal report, SARIF for the GitHub Security tab, mermaid graph, GitHub Action |
 | **4 ✅** | GCP: workload identity pools, providers, FD030 impersonation chains |
-| **5 ✅** | **Cross-cloud chains** — a trust edge followed from GitHub → AWS → GCP → BigQuery |
+| **5 ✅** | **Cross-cloud chains** a trust edge followed from GitHub → AWS → GCP → BigQuery |
 | **6 ✅** | Azure (beta), signed releases, Homebrew, per-rule docs |
 
 Phase 5 is the reason the project exists, and it is done. No other open-source
@@ -779,7 +779,7 @@ for a CLI and it is deliberately all it does.
 
 If you want the same analysis running continuously across every account, with
 history, drift alerts when a trust policy loosens, and one view across AWS, GCP
-and Azure, that is [**Secorvia**](https://secorvia.com) — cloud security posture
+and Azure, that is [**Secorvia**](https://secorvia.com) cloud security posture 
 management built by the same team. There is a free tier and it does not ask for
 a card.
 
