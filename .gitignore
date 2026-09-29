@@ -1,0 +1,6 @@
+/frontdoor
+/frontdoor.exe
+/dist/
+*.out
+*.test
+doors.json

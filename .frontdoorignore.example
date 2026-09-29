@@ -1,0 +1,13 @@
+# frontdoor suppression list
+#
+#   RULE_ID   RESOURCE_ARN   # why
+#
+# RULE_ID and RESOURCE may be *, and RESOURCE accepts * anywhere in the string.
+# Suppressed findings are NOT removed from the output - they stay marked as
+# suppressed with the reason, so nobody has to guess later why a door is open.
+#
+# Always write the why. Future you is the one who has to re-evaluate it.
+
+# FD001  arn:aws:iam::111122223333:role/legacy-ci    # retiring 2026-10-01, OPS-42
+# FD013  *                                           # every partner gets an ExternalId from our portal
+# *      arn:aws:iam::111122223333:role/sandbox-*    # throwaway sandbox roles, no production data

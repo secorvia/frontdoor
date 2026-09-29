@@ -1,0 +1,14 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PartnerWithExternalId",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::999988887777:root" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": { "sts:ExternalId": "acme-4f2c9b1e" }
+      }
+    }
+  ]
+}

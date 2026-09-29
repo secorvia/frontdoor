@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PartnerConfusedDeputy",
+      "Effect": "Allow",
+      "Principal": { "AWS": "999988887777" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}

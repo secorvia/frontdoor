@@ -1,0 +1,94 @@
+# Signed, reproducible release binaries.
+#
+# The checksums file and its cosign signature are the point: a security tool
+# that asks you to curl a binary should let you prove the binary is the one the
+# CI actually built.
+version: 2
+
+project_name: frontdoor
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: frontdoor
+    main: ./cmd/frontdoor
+    binary: frontdoor
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+
+archives:
+  - id: frontdoor
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+      - .frontdoorignore.example
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Keyless signing through the GitHub Actions OIDC identity - the same
+# mechanism this tool audits, used correctly: the signature is bound to the
+# exact workflow and ref that produced the artifact.
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
+sboms:
+  - artifacts: archive
+
+brews:
+  - name: frontdoor
+    repository:
+      owner: secorvia
+      name: homebrew-tap
+    homepage: "https://github.com/secorvia/frontdoor"
+    description: "Map the federated trust into your cloud accounts"
+    license: "Apache-2.0"
+    test: |
+      system "#{bin}/frontdoor", "version"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  footer: |
+    ## Verify this release
+
+    ```bash
+    cosign verify-blob checksums.txt \
+      --certificate checksums.txt.pem \
+      --signature checksums.txt.sig \
+      --certificate-identity-regexp 'https://github\.com/secorvia/frontdoor/\.github/workflows/.+' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+    sha256sum -c checksums.txt --ignore-missing
+    ```

@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Service",
+      "Effect": "Allow",
+      "Principal": { "Service": ["ec2.amazonaws.com", "lambda.amazonaws.com"] },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Sid": "SameAccount",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::111122223333:role/ops" },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Sid": "DeniedGitHub",
+      "Effect": "Deny",
+      "Principal": { "Federated": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com" },
+      "Action": "sts:AssumeRoleWithWebIdentity"
+    },
+    {
+      "Sid": "TwoFederated",
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": [
+          "arn:aws:iam::111122223333:oidc-provider/gitlab.com",
+          "arn:aws:iam::111122223333:saml-provider/Okta"
+        ]
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": { "gitlab.com:sub": "project_path:acme/infra:ref_type:branch:ref:main" }
+      }
+    }
+  ]
+}

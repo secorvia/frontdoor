@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GcpWorkloadIdentity",
+      "Effect": "Allow",
+      "Principal": { "Federated": "accounts.google.com" },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "accounts.google.com:aud": "109876543210987654321",
+          "accounts.google.com:sub": "109876543210987654321"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# Copy this into .github/workflows/frontdoor.yml in your own repository.
+#
+# It authenticates to AWS with GitHub OIDC - the very mechanism frontdoor
+# audits - so there is no long-lived access key anywhere in this workflow.
+
+name: frontdoor
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Monday morning
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/trust-policy*.json'
+
+permissions:
+  id-token: write          # to get the OIDC token for AWS
+  contents: read
+  security-events: write   # to upload SARIF to the Security tab
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume the read-only audit role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::111122223333:role/frontdoor-audit
+          aws-region: us-east-1
+
+      - name: Scan the front doors
+        uses: secorvia/frontdoor/.github/actions/frontdoor@v1
+        with:
+          fail-on: critical

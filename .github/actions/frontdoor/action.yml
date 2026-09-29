@@ -1,0 +1,114 @@
+name: 'frontdoor'
+description: 'Map the federated trust into your cloud accounts and upload the findings to the GitHub Security tab.'
+author: 'Secorvia'
+branding:
+  icon: 'log-in'
+  color: 'red'
+
+inputs:
+  version:
+    description: 'frontdoor version to install (a git tag, or "latest").'
+    required: false
+    default: 'latest'
+  fail-on:
+    description: 'Fail the job when a finding is at or above this severity: critical, high, medium, low, info. Use "none" to never fail.'
+    required: false
+    default: 'critical'
+  args:
+    description: 'Extra arguments passed to `frontdoor scan`.'
+    required: false
+    default: ''
+  ignore-file:
+    description: 'Path to a .frontdoorignore. Defaults to ./.frontdoorignore when it exists.'
+    required: false
+    default: ''
+  sarif-file:
+    description: 'Where to write the SARIF report.'
+    required: false
+    default: 'frontdoor.sarif'
+  upload-sarif:
+    description: 'Upload the SARIF to the GitHub Security tab. Needs security-events: write.'
+    required: false
+    default: 'true'
+  summary:
+    description: 'Write the report to the job summary.'
+    required: false
+    default: 'true'
+
+outputs:
+  sarif-file:
+    description: 'Path to the SARIF report.'
+    value: ${{ inputs.sarif-file }}
+  exit-code:
+    description: 'frontdoor exit code: 0 clean, 1 findings at or above fail-on, 2 tool error.'
+    value: ${{ steps.scan.outputs.exit-code }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+        cache: false
+
+    - name: Install frontdoor
+      shell: bash
+      run: go install github.com/secorvia/frontdoor/cmd/frontdoor@${{ inputs.version }}
+
+    - name: Scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        ignore_arg=""
+        if [ -n "${{ inputs.ignore-file }}" ]; then
+          ignore_arg="--ignore-file ${{ inputs.ignore-file }}"
+        fi
+
+        fail_arg="--fail-on ${{ inputs.fail-on }}"
+        if [ "${{ inputs.fail-on }}" = "none" ]; then
+          fail_arg=""
+        fi
+
+        # SARIF for the Security tab, then the human report for the log. The
+        # scan runs twice rather than once because the second run is cheap and
+        # a log nobody can read is worse than a duplicated API call.
+        frontdoor scan --format sarif --output "${{ inputs.sarif-file }}" \
+          $ignore_arg ${{ inputs.args }} --fail-on info >/dev/null 2>&1
+
+        frontdoor scan --color always $ignore_arg $fail_arg ${{ inputs.args }}
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+
+        if [ "${{ inputs.summary }}" = "true" ]; then
+          {
+            echo '## frontdoor'
+            echo
+            echo '```'
+            frontdoor scan --color never $ignore_arg ${{ inputs.args }} --fail-on info
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        fi
+
+        if [ "$code" = "2" ]; then
+          echo "::error::frontdoor failed to run"
+          exit 2
+        fi
+        if [ "$code" = "1" ]; then
+          echo "::error::frontdoor found issues at or above ${{ inputs.fail-on }}"
+        fi
+        # Do not exit yet - the SARIF upload below must still run.
+        exit 0
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' && always() }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: frontdoor
+
+    - name: Fail the job
+      if: ${{ steps.scan.outputs.exit-code != '0' }}
+      shell: bash
+      run: exit ${{ steps.scan.outputs.exit-code }}

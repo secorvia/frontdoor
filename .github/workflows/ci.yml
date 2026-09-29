@@ -1,0 +1,80 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Formatting
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go test ./... -race
+
+      # The whole pitch is that this tool never writes anything. If a mutating
+      # call ever lands in the tree, CI says so before a user has to trust it.
+      - name: Read-only guarantee
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          if grep -rnE '\.(Create|Delete|Put|Update|Attach|Detach|Add|Remove|Set|Tag|Untag|Modify|Patch|Undelete|Enable|Disable)[A-Z][A-Za-z]*\(ctx' internal/ cmd/; then
+            echo "A mutating cloud API call was added. frontdoor is read-only."
+            exit 1
+          fi
+          echo "No mutating cloud API calls."
+
+      # --resolve is the only outbound connection outside the cloud providers,
+      # and it must stay opt-in. A second one appearing silently would break
+      # the promise the README makes.
+      - name: One optional outbound connection
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          hits=$(grep -rnE 'http\.(Get|Post|Client)|net\.Dial|tls\.Dial' internal/ cmd/ \
+            --include='*.go' | grep -v '_test.go' | grep -v -e '^internal/rules/resolve.go' -e '^internal/azcollect/' || true)
+          if [ -n "$hits" ]; then
+            echo "New outbound network code outside internal/rules/resolve.go:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "Outbound network is confined to the opt-in --resolve path."
+
+      # Every finding links to a docs page. A rule shipped without one sends
+      # the reader to a 404 at the moment they most need an explanation.
+      - name: Every rule has a docs page
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          missing=""
+          for id in $(grep -rhoE '"FD0[0-9]{3}?"' internal/rules/*.go \
+              | grep -v _test | tr -d '"' | sort -u); do
+            [ -f "docs/rules/$id.md" ] || missing="$missing $id"
+          done
+          if [ -n "$missing" ]; then
+            echo "Rules with no docs/rules/<id>.md:$missing"
+            exit 1
+          fi
+          echo "Every rule id has a docs page."
