@@ -388,7 +388,7 @@ func TestFD014_KnownVendorIsNotFlagged(t *testing.T) {
 		},
 		ExternalParties: []model.ExternalParty{{
 			Kind: model.PartyAWSAccount, AccountID: "464622532012", Scope: model.ScopeAccount,
-			Vendor: "Datadog (us1)", VendorRef: "https://docs.datadoghq.com/",
+			Vendor: "Datadog", VendorRef: "https://docs.datadoghq.com/",
 		}},
 	}
 	if byID := run(resultWith(d)); len(byID["FD014"]) != 0 {

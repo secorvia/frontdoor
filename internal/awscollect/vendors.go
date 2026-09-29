@@ -28,30 +28,42 @@ type Vendor struct {
 // TO ADD AN ENTRY: paste the account id from the vendor's own published
 // CloudFormation template or docs page and put that URL in Source. Do not add
 // an id you cannot cite - an unverified label is worse than no label.
+// Verified 2026-09-30 against the sources below. Datadog uses a different
+// account per site, and its docs page substitutes the id from a site selector
+// rather than listing them, so the citations here are the CloudFormation
+// template and the Terraform guide, which carry the ids as static text. The
+// site each Datadog id serves is deliberately not claimed: what the label is
+// for is "this is Datadog, not a stranger", and that holds without it.
 var vendorAccounts = map[string]Vendor{
 	"464622532012": {
-		Name:   "Datadog (us1)",
-		Source: "https://docs.datadoghq.com/integrations/amazon_web_services/",
+		Name:   "Datadog",
+		Source: "https://github.com/DataDog/cloudformation-template/blob/master/aws/datadog_integration_role.yaml",
+		Note:   "DdAWSAccountId in Datadog's own integration-role template",
 	},
 	"417141415827": {
-		Name:   "Datadog (ap1)",
-		Source: "https://docs.datadoghq.com/integrations/amazon_web_services/",
+		Name:   "Datadog",
+		Source: "https://docs.datadoghq.com/integrations/guide/aws-terraform-setup/",
 	},
 	"669783387624": {
-		Name:   "Datadog (eu1)",
-		Source: "https://docs.datadoghq.com/integrations/amazon_web_services/",
+		Name:   "Datadog",
+		Source: "https://docs.datadoghq.com/integrations/guide/aws-terraform-setup/",
 	},
 	"392588925713": {
-		Name:   "Datadog (us1-fed)",
-		Source: "https://docs.datadoghq.com/integrations/amazon_web_services/",
+		Name:   "Datadog",
+		Source: "https://docs.datadoghq.com/integrations/guide/aws-terraform-setup/",
 	},
 	"754728514883": {
 		Name:   "New Relic",
-		Source: "https://docs.newrelic.com/docs/infrastructure/amazon-integrations/",
+		Source: "https://docs.newrelic.com/docs/infrastructure/amazon-integrations/connect/connect-aws-new-relic-infrastructure-monitoring/",
+		Note:   "cloud integrations; workflow automation uses a different account",
+	},
+	"253490767857": {
+		Name:   "New Relic (workflow automation)",
+		Source: "https://docs.newrelic.com/docs/workflow-automation/setup-and-configure/set-up-aws-credentials/iam-role-setup/",
 	},
 	"926226587429": {
-		Name:   "Sumo Logic (us1)",
-		Source: "https://help.sumologic.com/docs/send-data/hosted-collectors/amazon-aws/",
+		Name:   "Sumo Logic",
+		Source: "https://www.sumologic.com/help/docs/send-data/hosted-collectors/amazon-aws/grant-access-aws-product/",
 	},
 }
 
