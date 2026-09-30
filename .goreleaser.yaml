@@ -82,6 +82,10 @@ changelog:
       - "^chore:"
 
 release:
+  # Re-running the workflow on a tag that already has a release (a re-tag, or a
+  # re-run after a flake) otherwise 422s on every asset with already_exists and
+  # fails the job, even though the first run published fine.
+  replace_existing_artifacts: true
   footer: |
     ## Verify this release
 
