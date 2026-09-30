@@ -60,16 +60,18 @@ signs:
 sboms:
   - artifacts: archive
 
-brews:
-  - name: frontdoor
-    repository:
-      owner: secorvia
-      name: homebrew-tap
-    homepage: "https://github.com/secorvia/frontdoor"
-    description: "Map the federated trust into your cloud accounts"
-    license: "Apache-2.0"
-    test: |
-      system "#{bin}/frontdoor", "version"
+# Re-enable once the secorvia/homebrew-tap repo exists and HOMEBREW_TAP_TOKEN
+# is set as a repo secret. Until then this step 404s and fails the release.
+# brews:
+#   - name: frontdoor
+#     repository:
+#       owner: secorvia
+#       name: homebrew-tap
+#     homepage: "https://github.com/secorvia/frontdoor"
+#     description: "Map the federated trust into your cloud accounts"
+#     license: "Apache-2.0"
+#     test: |
+#       system "#{bin}/frontdoor", "version"
 
 changelog:
   sort: asc
