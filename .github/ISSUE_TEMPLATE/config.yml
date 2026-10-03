@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question about using frontdoor
+    url: https://github.com/secorvia/frontdoor/discussions
+    about: Setup, credentials, CI, output formats. Discussions, not issues.
+  - name: Rule documentation
+    url: https://www.secorvia.com/docs/frontdoor/
+    about: What each FD rule checks and why.
+  - name: Security vulnerability
+    url: https://github.com/secorvia/frontdoor/security/policy
+    about: Report privately. Do not open a public issue.

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;600;800&family=Fragment+Mono&display=swap" rel="stylesheet">
+<style>
+  /* Secorvia's own tokens. Theme is switched by a class on <body>. */
+  body.dark{
+    --bg:#06070c; --fg:#ffffff; --accent:#4a7ae8;
+    --node:#4a7ae8; --risk:#d11835; --risk-text:#ff4d6a;
+    --mute:#79818f; --inside:#aeb4c0; --url:#6e9bf0;
+  }
+  body.light{
+    --bg:#fafafa; --fg:#0b0d14; --accent:#1b3fa8;
+    --node:#1b3fa8; --risk:#d11835; --risk-text:#b3122a;
+    --mute:#8a8f99; --inside:#52565f; --url:#1b3fa8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1280px;height:640px}
+  body{
+    background:var(--bg); color:var(--fg); overflow:hidden; position:relative;
+    font-family:'Host Grotesk',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{position:relative;padding:62px 68px;height:100%;display:flex;flex-direction:column}
+
+  .lockup{display:flex;align-items:center;gap:15px}
+  .lockup svg{width:42px;height:42px;display:block}
+  .name{font-size:29px;font-weight:800;letter-spacing:-.5px}
+  .by{font-family:'Fragment Mono',monospace;font-size:13px;color:var(--mute);padding-top:5px}
+
+  h1{
+    margin-top:96px;font-size:66px;font-weight:800;
+    line-height:1.05;letter-spacing:-2.4px;
+  }
+  h1 .b{color:var(--accent)}
+
+  .repo{
+    margin-top:auto;font-family:'Fragment Mono',monospace;
+    font-size:16px;color:var(--url);
+  }
+
+  .diagram{position:absolute;right:66px;top:196px;width:450px;height:286px}
+  .lbl{font-family:'Fragment Mono',monospace;font-size:12.5px;fill:var(--mute)}
+  .lbl-in{font-family:'Fragment Mono',monospace;font-size:13px;fill:var(--inside)}
+  .warn{font-family:'Fragment Mono',monospace;font-size:12.5px;fill:var(--risk-text)}
+</style>
+</head>
+<body class="dark">
+  <div class="wrap">
+    <div class="lockup">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#1b3fa8"/>
+        <path d="M16 4.5L26 8.5V16C26 22 21.5 26.5 16 28.5C10.5 26.5 6 22 6 16V8.5L16 4.5Z" fill="none" stroke="white" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M16 12.4L12.2 18M16 12.4L19.8 18M12.2 18H19.8" stroke="white" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+        <circle cx="16" cy="12.4" r="2" fill="white"/>
+        <circle cx="12.2" cy="18" r="1.4" fill="none" stroke="white" stroke-width="1.3"/>
+        <circle cx="19.8" cy="18" r="1.4" fill="none" stroke="white" stroke-width="1.3"/>
+      </svg>
+      <span class="name">frontdoor</span>
+      <span class="by">by Secorvia</span>
+    </div>
+
+    <h1>Who can walk into<br><span class="b">your cloud account?</span></h1>
+
+    <span class="repo">github.com/secorvia/frontdoor</span>
+  </div>
+
+  <svg class="diagram" viewBox="0 0 450 286" xmlns="http://www.w3.org/2000/svg">
+    <path d="M86 52 C 196 52, 232 128, 338 142" fill="none" stroke="var(--node)"
+          stroke-width="1.7" stroke-dasharray="5 6" opacity=".7"/>
+    <path d="M86 234 C 196 234, 232 158, 338 146" fill="none" stroke="var(--node)"
+          stroke-width="1.7" stroke-dasharray="5 6" opacity=".7"/>
+    <path d="M86 143 C 196 143, 240 143, 338 144" fill="none" stroke="var(--risk)"
+          stroke-width="2.2" stroke-dasharray="5 6"/>
+
+    <circle cx="72" cy="52" r="11" fill="none" stroke="var(--node)" stroke-width="2"/>
+    <circle cx="72" cy="143" r="12.5" fill="none" stroke="var(--risk)" stroke-width="2.6"/>
+    <circle cx="72" cy="234" r="11" fill="none" stroke="var(--node)" stroke-width="2"/>
+
+    <text class="lbl"  x="72" y="24"  text-anchor="middle">okta saml</text>
+    <text class="warn" x="72" y="186" text-anchor="middle">github oidc</text>
+    <text class="warn" x="72" y="203" text-anchor="middle">sub: repo:*</text>
+    <text class="lbl"  x="72" y="272" text-anchor="middle">vendor role</text>
+
+    <circle cx="344" cy="144" r="5" fill="var(--risk)"/>
+    <text class="lbl-in" x="366" y="140" text-anchor="start">your cloud</text>
+    <text class="lbl-in" x="366" y="158" text-anchor="start">account</text>
+  </svg>
+</body>
+</html>

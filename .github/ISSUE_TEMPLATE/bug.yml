@@ -1,0 +1,81 @@
+name: Bug
+description: A crash, a wrong count, output that does not render
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a finding that is wrong rather than broken, use the false
+        positive template instead. Redact account ids and ARNs.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: frontdoor scan --aws --format json
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Full output or the stack trace. Redacted.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: frontdoor 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloud
+    attributes:
+      label: Cloud
+      options:
+        - AWS
+        - GCP
+        - Azure
+        - More than one
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: OS and architecture
+      placeholder: macOS 15, arm64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      options:
+        - install.sh
+        - Release archive
+        - go install
+        - Built from source
+        - GitHub Action
+    validations:
+      required: true

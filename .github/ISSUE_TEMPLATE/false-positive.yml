@@ -1,0 +1,54 @@
+name: False positive
+description: frontdoor flagged something that is actually correct
+labels: ["false positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A false positive is worth more than a new rule. Redact account ids,
+        ARNs and repository names before pasting anything.
+
+  - type: input
+    id: rule
+    attributes:
+      label: Rule
+      placeholder: FD012
+    validations:
+      required: true
+
+  - type: textarea
+    id: said
+    attributes:
+      label: What frontdoor said
+      description: The finding block, redacted.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: policy
+    attributes:
+      label: The policy it read
+      description: Trust policy, IAM binding or federation config. Redacted.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this configuration is correct
+      description: >
+        What pins it that frontdoor missed. A condition key, a subject
+        grammar, something enforced elsewhere.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `frontdoor version`.
+      placeholder: frontdoor 0.1.0
+    validations:
+      required: true

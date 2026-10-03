@@ -1,0 +1,73 @@
+name: New rule
+description: A trust pattern frontdoor should detect
+labels: ["rule"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the rule discipline in
+        [CONTRIBUTING.md](https://github.com/secorvia/frontdoor/blob/main/CONTRIBUTING.md)
+        first. The fields below are what a rule needs to meet it.
+
+  - type: textarea
+    id: pattern
+    attributes:
+      label: The pattern
+      description: >
+        The configuration itself. A trust policy, an IAM binding, a
+        federation setting. Redacted.
+      render: json
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloud
+    attributes:
+      label: Cloud
+      options:
+        - AWS
+        - GCP
+        - Azure
+    validations:
+      required: true
+
+  - type: textarea
+    id: attacker
+    attributes:
+      label: What someone does with it
+      description: >
+        The concrete step, not the category. "Any repository on GitHub can
+        assume this role" rather than "weak trust configuration".
+    validations:
+      required: true
+
+  - type: textarea
+    id: detect
+    attributes:
+      label: How to detect it read-only
+      description: >
+        Which List, Get or Describe call returns the field, and what the
+        check on that field is. A rule that needs a mutating call cannot
+        be added.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: The fix
+      description: >
+        The text or command that resolves it. A finding without a fix is
+        a complaint.
+    validations:
+      required: true
+
+  - type: textarea
+    id: unknown
+    attributes:
+      label: When the check cannot be sure
+      description: >
+        What the finding should say when the call is denied or the
+        expression will not parse. It must not guess in either direction.
+    validations:
+      required: true

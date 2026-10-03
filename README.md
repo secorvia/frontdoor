@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/secorvia/frontdoor/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/secorvia/frontdoor?color=blue"/></a>
   <a href="https://github.com/secorvia/frontdoor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/secorvia/frontdoor/actions/workflows/ci.yml/badge.svg"/></a>
   <a href="https://goreportcard.com/report/github.com/secorvia/frontdoor"><img alt="Go report card" src="https://goreportcard.com/badge/github.com/secorvia/frontdoor"/></a>
   <a href="LICENSE"><img alt="Apache 2.0" src="https://img.shields.io/badge/licence-Apache%202.0-blue.svg"/></a>
