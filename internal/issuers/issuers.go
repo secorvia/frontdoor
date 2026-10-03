@@ -72,6 +72,64 @@ var issuerSpecs = []issuerSpec{
 		Kind: model.PartyCognito, Name: "Amazon Cognito",
 		Match: func(i string) bool { return strings.HasPrefix(i, "cognito-identity.amazonaws.com") },
 	},
+
+	// The rest of AWS's shared-OIDC list. These are recognised so the report
+	// names the product rather than a bare URL, and so the reader can tell
+	// "a provider thousands of other AWS customers also use" from "an issuer
+	// only you have". Their subject grammars are deliberately not parsed: we
+	// have not verified them, and a guessed project name in a security report
+	// is worse than the raw subject.
+	{
+		Kind: model.PartySharedOIDC, Name: "GitHub (vstoken)",
+		Match: func(i string) bool { return strings.HasPrefix(i, "vstoken.actions.githubusercontent.com") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "GitHub audit log streaming",
+		Match: func(i string) bool {
+			return strings.HasPrefix(i, "oidc-configuration.audit-log.githubusercontent.com")
+		},
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Codefresh",
+		Match: func(i string) bool { return strings.HasPrefix(i, "oidc.codefresh.io") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "DVC Studio",
+		Match: func(i string) bool { return strings.HasPrefix(i, "studio.datachain.ai") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Pulumi Cloud",
+		Match: func(i string) bool { return strings.HasPrefix(i, "api.pulumi.com/oidc") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Scalr",
+		Match: func(i string) bool { return i == "scalr.io" || strings.HasPrefix(i, "scalr.io/") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Shisho Cloud",
+		Match: func(i string) bool { return strings.HasPrefix(i, "tokens.cloud.shisho.dev") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Upbound",
+		Match: func(i string) bool { return strings.HasPrefix(i, "proidc.upbound.io") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "sandboxes.cloud",
+		Match: func(i string) bool { return i == "sandboxes.cloud" || strings.HasPrefix(i, "sandboxes.cloud/") },
+	},
+	{
+		Kind: model.PartySharedOIDC, Name: "Azure Sentinel",
+		Match: func(i string) bool { return i == azureSentinelIssuer },
+	},
+	{
+		// IBM rotates this issuer with each platform release, so matching the
+		// host rather than the full URL keeps new versions recognised.
+		Kind: model.PartySharedOIDC, Name: "IBM Turbonomic",
+		Match: func(i string) bool {
+			return strings.HasPrefix(i, "rh-oidc.s3.us-east-1.amazonaws.com/") ||
+				strings.HasPrefix(i, "oidc.op1.openshiftapps.com/")
+		},
+	},
 }
 
 // normalizeIssuer is model.NormalizeIssuer, aliased for brevity in this
@@ -96,21 +154,36 @@ var audienceTenancy = []string{
 	"cognito-identity.amazonaws.com",
 }
 
-// TenancyClaim is the claim that identifies *which tenant* of this issuer is on
-// the other side of the door: "sub" for almost everything, "aud" for the
-// providers listed above.
+// azureSentinelIssuer is the one provider on AWS's list whose tenancy claim is
+// not namespaced under the issuer at all: it is the global sts:RoleSessionName
+// key. The issuer URL carries Microsoft's own fixed tenant GUID, so the issuer
+// cannot distinguish one customer from another and the session name does.
+const azureSentinelIssuer = "sts.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+
+// TenancyConditionKey is the policy condition key that says *which tenant* of
+// this issuer is on the other side of the door.
 //
-// Issuers AWS does not treat as shared get "sub" too. For a private issuer the
-// URL itself identifies the organization, so a missing subject condition is
+// Almost everywhere that is "<issuer>:sub". For the handful of shared providers
+// AWS names it is the audience instead, and for Azure Sentinel it is a global
+// key with no issuer prefix. Getting this wrong in the generous direction means
+// putting a critical on a role configured exactly as the provider requires.
+//
+// An issuer AWS does not treat as shared also gets ":sub". For a private issuer
+// the URL itself identifies the organization, so a missing subject condition is
 // still worth reporting, and defaulting the other way would hide real findings.
-func TenancyClaim(issuer string) string {
+//
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc_secure-by-default.html
+func TenancyConditionKey(issuer string) string {
 	n := Normalize(issuer)
+	if n == azureSentinelIssuer {
+		return "sts:RoleSessionName"
+	}
 	for _, a := range audienceTenancy {
 		if n == a || strings.HasPrefix(n, a+"/") {
-			return "aud"
+			return n + ":aud"
 		}
 	}
-	return "sub"
+	return n + ":sub"
 }
 
 func specForIssuer(issuer string) *issuerSpec {

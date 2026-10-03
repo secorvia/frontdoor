@@ -237,6 +237,7 @@ does not ask.
 | **Every IAM role trust policy** | parsed into structured doors, one per external principal |
 | **Subject claims** | GitHub Actions, GitLab CI, CircleCI, Terraform Cloud, Vercel, Buildkite, Bitbucket Pipelines, Google (AWS↔GCP federation) |
 | **GitHub immutable subjects** | `repo:org@123456/repo@456789:...`, the format repositories created after 15 July 2026 use. Read so the report shows plain names, with the numeric ids carried back into every suggested fix, because a condition written without them stops matching |
+| **Which claim names the tenant** | AWS's full shared-OIDC list, including the five providers where the tenant arrives in the audience or in `sts:RoleSessionName` rather than the subject. A role pinned the way those providers require has no subject condition at all, and is not reported as open |
 | **Cross-account trusts** | account id, `sts:ExternalId` presence, known-vendor labelling |
 | **What each door grants** | attached + inline policies flattened, privilege-escalation actions flagged with a reason |
 | **Organization layout** | so a sibling account is not reported as a stranger |

@@ -27,18 +27,23 @@ func conditionIsWildcard(c model.Condition) bool {
 func (c *evalContext) federatedRules(d *model.Door) {
 	subKey := d.SubjectConditionKey()
 	audKey := d.AudienceConditionKey()
-	audCond, hasAud := d.ConditionFor(audKey)
+	_, hasAud := d.ConditionFor(audKey)
 	held := narrowingConditions(d)
 
-	// For a few shared providers AWS names explicitly - Vercel, Pulumi,
-	// sandboxes.cloud, Cognito - the tenant is identified by the audience
-	// claim, and a correct trust policy carries no subject condition at all.
-	// On those, a pinned audience is the door being shut, not left open.
-	tenancyPinned := d.PrincipalType == model.PrincipalOIDC &&
-		issuers.TenancyClaim(d.Issuer) == "aud" &&
-		hasAud && !conditionIsWildcard(audCond)
-	if tenancyPinned {
-		subKey = audKey
+	// On a few shared providers AWS names explicitly, the tenant is identified
+	// by something other than the subject: the audience for Vercel, Pulumi,
+	// sandboxes.cloud and Cognito, and sts:RoleSessionName for Azure Sentinel.
+	// A correct trust policy for one of those carries no subject condition at
+	// all, so the pinned tenancy claim is the door being shut, not left open.
+	tenancyPinned := false
+	if d.PrincipalType == model.PrincipalOIDC {
+		if key := issuers.TenancyConditionKey(d.Issuer); key != subKey {
+			cond, ok := d.ConditionFor(key)
+			if ok && !conditionIsWildcard(cond) {
+				tenancyPinned = true
+				subKey = key
+			}
+		}
 	}
 
 	openSubject := false

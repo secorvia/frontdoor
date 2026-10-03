@@ -51,7 +51,15 @@ const (
 	PartySAMLIdP        PartyKind = "saml_idp"
 	PartyAWSService     PartyKind = "aws_service"
 	PartyAnyone         PartyKind = "anyone"
-	PartyUnknown        PartyKind = "unknown"
+
+	// PartySharedOIDC is a provider AWS lists as a shared OIDC issuer and we
+	// recognise by name, but whose subject grammar we do not model. The door is
+	// reported with the provider's real name and the subject verbatim. Guessing
+	// at a grammar we have not verified would put invented repository and
+	// project names in a security report.
+	PartySharedOIDC PartyKind = "shared_oidc"
+
+	PartyUnknown PartyKind = "unknown"
 )
 
 // Condition is one condition clause on the door, kept verbatim so rules can

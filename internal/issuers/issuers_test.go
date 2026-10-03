@@ -6,6 +6,63 @@ import (
 	"github.com/secorvia/frontdoor/internal/model"
 )
 
+// AWS publishes the list of shared OIDC providers it applies identity-provider
+// controls to. Recognising them by name is half the job; the other half is
+// knowing which claim names the tenant, because for several of them it is not
+// the subject, and reading an absent subject as "open" puts a critical on a
+// correct configuration.
+//
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc_secure-by-default.html
+func TestSharedOIDCProviders(t *testing.T) {
+	tests := []struct {
+		issuer     string
+		name       string
+		tenancyKey string
+	}{
+		{"token.actions.githubusercontent.com", "GitHub Actions", "token.actions.githubusercontent.com:sub"},
+		{"gitlab.com", "GitLab CI", "gitlab.com:sub"},
+		{"app.terraform.io", "Terraform Cloud", "app.terraform.io:sub"},
+		{"agent.buildkite.com", "Buildkite", "agent.buildkite.com:sub"},
+		{"vstoken.actions.githubusercontent.com", "GitHub (vstoken)", "vstoken.actions.githubusercontent.com:sub"},
+		{"oidc-configuration.audit-log.githubusercontent.com", "GitHub audit log streaming", "oidc-configuration.audit-log.githubusercontent.com:sub"},
+		{"oidc.codefresh.io", "Codefresh", "oidc.codefresh.io:sub"},
+		{"studio.datachain.ai/api", "DVC Studio", "studio.datachain.ai/api:sub"},
+		{"scalr.io", "Scalr", "scalr.io:sub"},
+		{"tokens.cloud.shisho.dev", "Shisho Cloud", "tokens.cloud.shisho.dev:sub"},
+		{"proidc.upbound.io", "Upbound", "proidc.upbound.io:sub"},
+		{"oidc.op1.openshiftapps.com/2f785sojlpb85i7402pk3qogugim5nfb", "IBM Turbonomic", "oidc.op1.openshiftapps.com/2f785sojlpb85i7402pk3qogugim5nfb:sub"},
+
+		// Tenancy arrives in the audience for these four.
+		{"oidc.vercel.com", "Vercel", "oidc.vercel.com:aud"},
+		{"api.pulumi.com/oidc", "Pulumi Cloud", "api.pulumi.com/oidc:aud"},
+		{"sandboxes.cloud", "sandboxes.cloud", "sandboxes.cloud:aud"},
+		{"cognito-identity.amazonaws.com", "Amazon Cognito", "cognito-identity.amazonaws.com:aud"},
+
+		// And in a global condition key for this one.
+		{"sts.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d", "Azure Sentinel", "sts:RoleSessionName"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.issuer, func(t *testing.T) {
+			if got := DisplayName(tt.issuer); got != tt.name {
+				t.Errorf("DisplayName = %q, want %q", got, tt.name)
+			}
+			if got := TenancyConditionKey(tt.issuer); got != tt.tenancyKey {
+				t.Errorf("TenancyConditionKey = %q, want %q", got, tt.tenancyKey)
+			}
+		})
+	}
+}
+
+// A private issuer is not on anyone's shared list, and its URL is the thing
+// that identifies the organization. It must still pin a subject.
+func TestPrivateIssuerPinsOnSubject(t *testing.T) {
+	const own = "oidc.internal.acme.example"
+	if got := TenancyConditionKey(own); got != own+":sub" {
+		t.Errorf("TenancyConditionKey = %q, want the subject key", got)
+	}
+}
+
 func TestParseSubject(t *testing.T) {
 	tests := []struct {
 		name      string

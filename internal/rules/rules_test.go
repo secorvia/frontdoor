@@ -103,6 +103,47 @@ func TestUnpinnedVercelDoorStillFires(t *testing.T) {
 	})
 }
 
+// Azure Sentinel is the same mistake wearing a different hat. Its issuer URL
+// carries Microsoft's own tenant GUID, identical for every AWS customer, so the
+// issuer cannot tell one customer from another. AWS requires sts:RoleSessionName
+// instead, which is not namespaced under the issuer at all.
+func TestAzureSentinelPinnedBySessionName(t *testing.T) {
+	const sentinel = "sts.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+	recent := testNow.AddDate(0, 0, -2)
+	base := func() model.Door {
+		return model.Door{
+			Provider:      model.ProviderAWS,
+			AccountID:     selfAccount,
+			ResourceARN:   "arn:aws:iam::111122223333:role/sentinel-reader",
+			ResourceName:  "sentinel-reader",
+			PrincipalType: model.PrincipalOIDC,
+			Issuer:        sentinel,
+			LastUsed:      &recent,
+			CreatedAt:     daysAgo(30),
+			ExternalParties: []model.ExternalParty{{
+				Kind: model.PartySharedOIDC, Scope: model.ScopeAnyone, Wildcard: true,
+				Display: "ANY Azure Sentinel tenant",
+			}},
+		}
+	}
+
+	t.Run("pinned by session name is not a finding", func(t *testing.T) {
+		d := base()
+		d.Conditions = []model.Condition{
+			{Operator: "StringEquals", Key: "sts:RoleSessionName", Values: []string{"MicrosoftSentinel_acme"}},
+		}
+		if f := run(resultWith(d))["FD001"]; len(f) != 0 {
+			t.Errorf("FD001 fired on a role pinned the way AWS requires: %q", f[0].WhatIsWrong)
+		}
+	})
+
+	t.Run("nothing pinned still fires", func(t *testing.T) {
+		if f := run(resultWith(base()))["FD001"]; len(f) == 0 {
+			t.Error("FD001 should fire: the issuer is shared and nothing names the tenant")
+		}
+	})
+}
+
 // githubDoor is a door with an exact, correctly-namespaced subject and
 // audience - the shape a correct trust policy produces. Tests mutate it to
 // introduce exactly one defect, so a rule that fires on the untouched door is
