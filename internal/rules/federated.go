@@ -3,22 +3,53 @@ package rules
 import (
 	"strings"
 
+	"github.com/secorvia/frontdoor/internal/issuers"
 	"github.com/secorvia/frontdoor/internal/model"
 )
+
+// conditionIsWildcard reports whether a condition names nothing in particular:
+// no values at all, or every value a bare glob. Such a condition is present in
+// the policy but constrains nobody, so it must not be read as a pin.
+func conditionIsWildcard(c model.Condition) bool {
+	if len(c.Values) == 0 {
+		return true
+	}
+	for _, v := range c.Values {
+		if v != "" && v != "*" && !strings.HasPrefix(v, "*") {
+			return false
+		}
+	}
+	return true
+}
 
 // federatedRules covers the OIDC and SAML doors: FD001, FD002, FD003, FD005,
 // FD010, FD011, FD012 and FD015.
 func (c *evalContext) federatedRules(d *model.Door) {
 	subKey := d.SubjectConditionKey()
 	audKey := d.AudienceConditionKey()
-	_, hasAud := d.ConditionFor(audKey)
+	audCond, hasAud := d.ConditionFor(audKey)
 	held := narrowingConditions(d)
+
+	// For a few shared providers AWS names explicitly - Vercel, Pulumi,
+	// sandboxes.cloud, Cognito - the tenant is identified by the audience
+	// claim, and a correct trust policy carries no subject condition at all.
+	// On those, a pinned audience is the door being shut, not left open.
+	tenancyPinned := d.PrincipalType == model.PrincipalOIDC &&
+		issuers.TenancyClaim(d.Issuer) == "aud" &&
+		hasAud && !conditionIsWildcard(audCond)
+	if tenancyPinned {
+		subKey = audKey
+	}
 
 	openSubject := false
 	for i := range d.ExternalParties {
 		p := &d.ExternalParties[i]
 		switch p.Scope {
 		case model.ScopeAnyone:
+			if tenancyPinned {
+				// The audience names the tenant, so this door is not open.
+				continue
+			}
 			openSubject = true
 			c.fd001(d, p, subKey, held)
 		case model.ScopeUnknown:

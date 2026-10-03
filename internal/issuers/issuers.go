@@ -78,6 +78,41 @@ var issuerSpecs = []issuerSpec{
 // package where it is used on nearly every line.
 func Normalize(s string) string { return model.NormalizeIssuer(s) }
 
+// audienceTenancy lists the shared OIDC providers where the tenant is named by
+// the *audience* claim rather than the subject. AWS calls the required claim an
+// "identity-provider control" and refuses to create or update a trust policy
+// for one of these issuers unless that claim is evaluated.
+//
+// This matters because a correctly configured role for one of them carries no
+// subject condition at all. Reading the absent subject as "anyone may enter"
+// would put a critical on a role built exactly the way AWS demands, which is
+// the most expensive kind of wrong a scanner can be.
+//
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc_secure-by-default.html
+var audienceTenancy = []string{
+	"oidc.vercel.com",
+	"api.pulumi.com/oidc",
+	"sandboxes.cloud",
+	"cognito-identity.amazonaws.com",
+}
+
+// TenancyClaim is the claim that identifies *which tenant* of this issuer is on
+// the other side of the door: "sub" for almost everything, "aud" for the
+// providers listed above.
+//
+// Issuers AWS does not treat as shared get "sub" too. For a private issuer the
+// URL itself identifies the organization, so a missing subject condition is
+// still worth reporting, and defaulting the other way would hide real findings.
+func TenancyClaim(issuer string) string {
+	n := Normalize(issuer)
+	for _, a := range audienceTenancy {
+		if n == a || strings.HasPrefix(n, a+"/") {
+			return "aud"
+		}
+	}
+	return "sub"
+}
+
 func specForIssuer(issuer string) *issuerSpec {
 	n := Normalize(issuer)
 	for i := range issuerSpecs {

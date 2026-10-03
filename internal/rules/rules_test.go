@@ -22,6 +22,87 @@ func daysAgo(n int) *time.Time {
 	return &t
 }
 
+// AWS calls Vercel, Pulumi, sandboxes.cloud and Cognito "shared OIDC providers"
+// whose tenancy arrives in the *audience* claim, not the subject, and requires
+// that claim to be evaluated in the trust policy. A correct Vercel role
+// therefore pins `oidc.vercel.com:aud` and carries no subject condition at all.
+//
+// Reading that as "no subject condition, so anyone can walk in" is a critical
+// false positive on a role configured exactly the way AWS demands.
+//
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc_secure-by-default.html
+func TestCorrectlyPinnedVercelDoorProducesNoFindings(t *testing.T) {
+	recent := testNow.AddDate(0, 0, -2)
+	d := model.Door{
+		Provider:      model.ProviderAWS,
+		AccountID:     selfAccount,
+		ResourceARN:   "arn:aws:iam::111122223333:role/vercel-deploy",
+		ResourceName:  "vercel-deploy",
+		PrincipalType: model.PrincipalOIDC,
+		Issuer:        "oidc.vercel.com",
+		LastUsed:      &recent,
+		CreatedAt:     daysAgo(30),
+		Conditions: []model.Condition{
+			{Operator: "StringEquals", Key: "oidc.vercel.com:aud",
+				Values: []string{"https://vercel.com/acme"}},
+		},
+		// No subject condition exists, so the collector yields one unbounded
+		// party. The audience condition is what actually pins the tenant.
+		ExternalParties: []model.ExternalParty{{
+			Kind: model.PartyVercel, Scope: model.ScopeAnyone, Wildcard: true,
+			Display: "ANY Vercel tenant",
+		}},
+	}
+
+	byID := run(resultWith(d))
+	if f := byID["FD001"]; len(f) != 0 {
+		t.Errorf("FD001 fired on a Vercel role pinned by audience, which is how AWS requires it: %q", f[0].WhatIsWrong)
+	}
+	if f := byID["FD002"]; len(f) != 0 {
+		t.Errorf("FD002 fired although the audience condition is present: %q", f[0].WhatIsWrong)
+	}
+}
+
+// The other half of the Vercel case, and the one that stops the fix above from
+// turning into a blanket excuse: with the audience claim absent, or present but
+// a bare wildcard, nothing names the tenant and the door really is open.
+func TestUnpinnedVercelDoorStillFires(t *testing.T) {
+	base := func() model.Door {
+		recent := testNow.AddDate(0, 0, -2)
+		return model.Door{
+			Provider:      model.ProviderAWS,
+			AccountID:     selfAccount,
+			ResourceARN:   "arn:aws:iam::111122223333:role/vercel-deploy",
+			ResourceName:  "vercel-deploy",
+			PrincipalType: model.PrincipalOIDC,
+			Issuer:        "oidc.vercel.com",
+			LastUsed:      &recent,
+			CreatedAt:     daysAgo(30),
+			ExternalParties: []model.ExternalParty{{
+				Kind: model.PartyVercel, Scope: model.ScopeAnyone, Wildcard: true,
+				Display: "ANY Vercel tenant",
+			}},
+		}
+	}
+
+	t.Run("no audience condition at all", func(t *testing.T) {
+		d := base()
+		if f := run(resultWith(d))["FD001"]; len(f) == 0 {
+			t.Error("FD001 should fire: nothing in this policy names a tenant")
+		}
+	})
+
+	t.Run("audience present but a bare wildcard", func(t *testing.T) {
+		d := base()
+		d.Conditions = []model.Condition{
+			{Operator: "StringLike", Key: "oidc.vercel.com:aud", Values: []string{"*"}},
+		}
+		if f := run(resultWith(d))["FD001"]; len(f) == 0 {
+			t.Error("FD001 should fire: a wildcard audience pins nobody")
+		}
+	})
+}
+
 // githubDoor is a door with an exact, correctly-namespaced subject and
 // audience - the shape a correct trust policy produces. Tests mutate it to
 // introduce exactly one defect, so a rule that fires on the untouched door is
