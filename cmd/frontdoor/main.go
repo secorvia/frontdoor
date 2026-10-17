@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -23,7 +24,23 @@ import (
 )
 
 // version is overridden at build time with -ldflags "-X main.version=...".
+// A release build sets it that way. `go install ...@latest` does not run the
+// Makefile, so fall back to the module version the toolchain stamps into the
+// binary and report that instead of the placeholder.
 var version = "0.1.0-dev"
+
+func init() {
+	if version != "0.1.0-dev" {
+		return
+	}
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		version = v
+	}
+}
 
 const (
 	exitOK    = 0
