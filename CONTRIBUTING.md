@@ -6,7 +6,7 @@ features. They are:
 1. **A false positive.** If `frontdoor` flagged something that is actually
    correct, that is a bug worth more than a new rule. Open an issue with the
    policy (redacted) and what it should have said.
-2. **A vendor account id** with the vendor's own doc URL, see
+2. **A vendor account id** with the vendor's own doc URL; see
    [`internal/awscollect/vendors.go`](internal/awscollect/vendors.go).
 3. **A subject grammar** for a CI platform we do not parse yet.
 4. **A rule**, with the discipline below.
