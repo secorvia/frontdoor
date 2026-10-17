@@ -6,7 +6,7 @@ features. They are:
 1. **A false positive.** If `frontdoor` flagged something that is actually
    correct, that is a bug worth more than a new rule. Open an issue with the
    policy (redacted) and what it should have said.
-2. **A vendor account id** with the vendor's own doc URL — see
+2. **A vendor account id** with the vendor's own doc URL, see
    [`internal/awscollect/vendors.go`](internal/awscollect/vendors.go).
 3. **A subject grammar** for a CI platform we do not parse yet.
 4. **A rule**, with the discipline below.
@@ -37,7 +37,7 @@ it at and nowhere else. The single exception is `--resolve`, which is opt-in.
 CI fails if HTTP code appears outside the collectors and that one file.
 
 **Never say more than you know.** This is the one that takes discipline. If a
-call was denied, the finding says so and lowers its own severity — it does not
+call was denied, the finding says so and lowers its own severity. It does not
 assume the worst and it does not stay silent. If an expression could not be
 parsed, the finding says *that*, rather than guessing "wide open" or "fine".
 Look at `FD005` and at the `understood` return from `ConstrainsSubject` for what
@@ -107,7 +107,7 @@ three collectors, because the same GitHub subject appears in an AWS trust
 policy, a GCP workload identity binding and an Azure federated credential.
 
 Add an `issuerSpec` with a `Match` on the issuer host and a `Parse` that fills
-`Org`, `Project`, `Ref`, `Environment` and — most importantly — `Scope`:
+`Org`, `Project`, `Ref`, `Environment` and, most importantly, `Scope`:
 
 | Scope | Means |
 |---|---|
@@ -130,8 +130,8 @@ the wildcard case.
 
 ## Reporting a vulnerability
 
-If you find a flaw in `frontdoor` itself — something that makes it report a
-door as closed when it is open — please do not open a public issue. Email
+If you find a flaw in `frontdoor` itself, something that makes it report a
+door as closed when it is open, please do not open a public issue. Email
 security@secorvia.com. Findings about your own cloud belong in your own
 tracker, not here.
 

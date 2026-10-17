@@ -62,8 +62,8 @@ Until `v1.0.0`, only the latest release gets fixes. Upgrade before reporting.
 
 ## Scope
 
-In scope: this repository — the CLI, the detection rules, the GitHub Action in
-`.github/actions/frontdoor`, the release pipeline and `install.sh`.
+In scope: this repository, meaning the CLI, the detection rules, the GitHub
+Action in `.github/actions/frontdoor`, the release pipeline and `install.sh`.
 
 Out of scope: the Secorvia hosted product at secorvia.com, which has its own
 disclosure process at security@secorvia.com, and the documentation site.
