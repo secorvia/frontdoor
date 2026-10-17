@@ -30,16 +30,16 @@ import (
 var version = "0.1.0-dev"
 
 func init() {
-	if version != "0.1.0-dev" {
-		return
+	if version == "0.1.0-dev" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			if v := info.Main.Version; v != "" && v != "(devel)" {
+				version = v
+			}
+		}
 	}
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return
-	}
-	if v := info.Main.Version; v != "" && v != "(devel)" {
-		version = v
-	}
+	// goreleaser hands over the tag with its leading v already stripped, the
+	// Makefile and the module path both keep it. Print one form either way.
+	version = strings.TrimPrefix(version, "v")
 }
 
 const (
