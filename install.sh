@@ -36,8 +36,11 @@ case "$arch" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-  VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
-    sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
+  # Resolve the tag from the releases/latest redirect rather than the REST API.
+  # The API allows 60 unauthenticated requests an hour per IP, which a shared
+  # office or CI address burns through long before anyone runs this.
+  VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+    "https://github.com/$REPO/releases/latest" | sed -n 's|.*/releases/tag/||p')
   [ -n "$VERSION" ] || die "could not determine the latest version"
 fi
 NUM="${VERSION#v}"
