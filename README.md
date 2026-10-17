@@ -373,7 +373,10 @@ frontdoor scan --aws | jq -r '.findings[] | "\(.id) \(.resource_arn)"'
 | `--gcp-project <ids>` | comma-separated project ids to scan |
 | `--gcp-all-projects` | scan every project the caller can see (off by default; on a large org that is thousands of calls nobody asked for) |
 | `--gcp-credentials <f>` | a service-account key file instead of ADC |
-| `--azure` | recognised, not implemented yet; the CLI says so rather than scanning nothing |
+| `--azure` | scan Azure and Entra ID (beta) |
+| `--azure-tenant <id>` | Entra ID tenant id |
+| `--azure-subscription <ids>` | comma-separated subscription ids to scan |
+| `--azure-skip-arm` | skip role assignments and managed identities |
 | `--format <fmt>` | `terminal` (default), `json`, `sarif`, `mermaid` |
 | `--color <when>` | `auto` (default), `always`, `never`. `NO_COLOR` always wins |
 | `--profile <name>` | AWS shared-config profile |
