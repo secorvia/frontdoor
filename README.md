@@ -306,9 +306,6 @@ FD005 (medium), never as a wide-open critical.
 # Go toolchain (needs Go 1.26+)
 go install github.com/secorvia/frontdoor/cmd/frontdoor@latest
 
-# Homebrew
-brew install secorvia/tap/frontdoor
-
 # Script: verifies the SHA-256 against the signed checksums file before
 # unpacking, and the cosign signature too if cosign is installed
 curl -fsSL https://raw.githubusercontent.com/secorvia/frontdoor/main/install.sh | sh
@@ -710,7 +707,7 @@ PRs adding vendor account ids are welcome; include the vendor doc URL.
 | **3 ✅** | Terminal report, SARIF for the GitHub Security tab, mermaid graph, GitHub Action |
 | **4 ✅** | GCP: workload identity pools, providers, FD030 impersonation chains |
 | **5 ✅** | **Cross-cloud chains**: a trust edge followed from GitHub → AWS → GCP → BigQuery |
-| **6 ✅** | Azure (beta), signed releases, Homebrew, per-rule docs |
+| **6 ✅** | Azure (beta), signed releases, per-rule docs |
 
 Phase 5 is the reason the project exists, and it is done. No other open-source
 tool follows a trust edge from one cloud into another.
